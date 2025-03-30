@@ -1,0 +1,143 @@
+image: node:16-alpine
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .npm
+
+stages:
+  - test
+  - build
+  - deploy
+
+before_script:
+  - npm ci --cache .npm
+  - npm install -g expo-cli eas-cli
+  - apk add --no-cache bash curl jq
+
+variables:
+  EXPO_TOKEN: ${EXPO_TOKEN}
+  # Set to "true" when iOS is configured
+  IOS_CONFIGURED: "false"
+
+lint:
+  stage: test
+  script:
+    - echo "Running linting checks"
+    - npm run lint
+  tags:
+    - docker
+
+type-check:
+  stage: test
+  script:
+    - echo "Running type checking"
+    - npm run typecheck
+  tags:
+    - docker
+
+optimize-assets:
+  stage: build
+  script:
+    - echo "Optimizing assets for build"
+    - npx expo-optimize
+  artifacts:
+    paths:
+      - assets/
+  tags:
+    - docker
+
+eas-build-android:
+  stage: build
+  script:
+    - echo "Logging in to EAS"
+    - npx expo login -t $EXPO_TOKEN
+    - echo "Starting Android build process"
+    - npx eas-cli build --platform android --profile preview --non-interactive
+  dependencies:
+    - optimize-assets
+  tags:
+    - docker
+
+eas-build-ios:
+  stage: build
+  script:
+    - echo "Checking if iOS is configured"
+    - |
+      if [ "$IOS_CONFIGURED" = "true" ]; then
+        echo "iOS is configured, starting build process"
+        npx expo login -t $EXPO_TOKEN
+        npx eas-cli build --platform ios --profile preview --non-interactive
+      else
+        echo "iOS is not yet configured, skipping build"
+        exit 0
+      fi
+  dependencies:
+    - optimize-assets
+  tags:
+    - docker
+  when: always
+
+eas-update-preview:
+  stage: deploy
+  script:
+    - echo "Publishing update to preview channel"
+    - npx expo login -t $EXPO_TOKEN
+    - npx eas-cli update --branch preview --message "Update via CI/CD pipeline"
+  dependencies:
+    - optimize-assets
+  tags:
+    - docker
+  when: manual
+  needs:
+    - eas-build-android
+    - eas-build-ios
+
+eas-submit-android:
+  stage: deploy
+  script:
+    - echo "Logging in to EAS"
+    - npx expo login -t $EXPO_TOKEN
+    - echo "Submitting Android build to Expo"
+    - npx eas-cli submit --platform android --latest
+  tags:
+    - docker
+  when: manual
+  needs:
+    - eas-build-android
+
+eas-submit-ios:
+  stage: deploy
+  script:
+    - echo "Checking if iOS is configured"
+    - |
+      if [ "$IOS_CONFIGURED" = "true" ]; then
+        echo "iOS is configured, submitting build to Expo"
+        npx expo login -t $EXPO_TOKEN
+        npx eas-cli submit --platform ios --latest
+      else
+        echo "iOS is not yet configured, skipping submission"
+        exit 0
+      fi
+  tags:
+    - docker
+  when: manual
+  needs:
+    - eas-build-ios
+
+eas-update-production:
+  stage: deploy
+  script:
+    - echo "Publishing update to production channel"
+    - npx expo login -t $EXPO_TOKEN
+    - npx eas-cli update --branch production --message "Production update via CI/CD pipeline"
+  dependencies:
+    - optimize-assets
+  tags:
+    - docker
+  when: manual
+  only:
+    - main
+  needs:
+    - eas-build-android
+    - eas-build-ios

@@ -1,0 +1,190 @@
+import { AuthAPI, UserAPI } from '@/services/api';
+import { User } from '@/types/types';
+import { router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { create } from 'zustand';
+
+interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+  socialLoading: 'google' | 'facebook' | null;
+  isAuthenticated: boolean;
+
+  login: (email: string, password: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshTokens: () => Promise<boolean>;
+  handleSocialLogin: (
+    type: 'google' | 'facebook',
+    token?: string
+  ) => Promise<{ authUrl: string; callbackUrl: string } | AuthResponse | void>;
+  setSocialLoading: (provider: 'google' | 'facebook' | null) => void;
+  fetchUser: () => Promise<User | null>;
+  verifyEmail: () => Promise<void>;
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isLoading: false,
+  socialLoading: null,
+  isAuthenticated: false,
+
+  login: async (email: string, password: string) => {
+    set({ isLoading: true });
+    try {
+      const response = await AuthAPI.login(email, password);
+
+      await SecureStore.setItemAsync('accessToken', response.accessToken);
+      await SecureStore.setItemAsync('refreshToken', response.refreshToken);
+
+      await get().fetchUser();
+      router.push('/(tabs)/profile/authenticated');
+      set({ isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  signup: async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => {
+    set({ isLoading: true });
+    try {
+      const response = await AuthAPI.signup(
+        email,
+        password,
+        firstName,
+        lastName
+      );
+
+      await SecureStore.setItemAsync('accessToken', response.accessToken);
+      await SecureStore.setItemAsync('refreshToken', response.refreshToken);
+
+      await get().fetchUser();
+      await get().verifyEmail();
+      router.push('/(tabs)/profile/authenticated');
+      set({ isAuthenticated: true, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  logout: async () => {
+    set({ isLoading: true });
+    try {
+      await AuthAPI.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('refreshToken');
+      set({ user: null, isAuthenticated: false, isLoading: false });
+    }
+  },
+
+  refreshTokens: async () => {
+    try {
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+      if (!refreshToken) return false;
+
+      const response = await AuthAPI.refreshToken(refreshToken);
+
+      await SecureStore.setItemAsync('accessToken', response.accessToken);
+      if (response.refreshToken) {
+        await SecureStore.setItemAsync('refreshToken', response.refreshToken);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('refreshToken');
+      set({ user: null, isAuthenticated: false });
+
+      return false;
+    }
+  },
+
+  setSocialLoading: (provider) => {
+    set({ socialLoading: provider });
+  },
+
+  handleSocialLogin: async (type: 'google' | 'facebook', token?: string) => {
+    set({ socialLoading: type });
+
+    if (token) {
+      try {
+        // Remove debug alert
+        // Alert.alert(token, type);
+        const response = await AuthAPI.refreshToken(token);
+
+        await SecureStore.setItemAsync('accessToken', response.accessToken);
+        await SecureStore.setItemAsync('refreshToken', response.refreshToken);
+
+        await get().fetchUser();
+        set({ isAuthenticated: true, socialLoading: null });
+
+        // Return the response for further processing
+        return response;
+      } catch (error) {
+        set({ socialLoading: null });
+        throw error;
+      }
+    } else {
+      set({ socialLoading: null });
+      return {
+        authUrl:
+          type === 'google' ? AuthAPI.googleLogin() : AuthAPI.facebookLogin(),
+        callbackUrl: 'dabbler://auth',
+      };
+    }
+  },
+
+  fetchUser: async () => {
+    try {
+      const response = await UserAPI.getCurrentUser();
+      set({ user: response, isAuthenticated: true });
+      return response;
+    } catch (error) {
+      // If unauthorized, try to refresh the token
+      if (error instanceof Error) {
+        const anyError = error as any;
+        if (anyError.response?.status === 401) {
+          const refreshed = await get().refreshTokens();
+          if (refreshed) {
+            // Try fetching the user again after token refresh
+            return get().fetchUser();
+          }
+        }
+      }
+      set({ user: null, isAuthenticated: false });
+      return null;
+    }
+  },
+
+  verifyEmail: async () => {
+    await UserAPI.verifyEmail();
+  },
+}));
+
+// Initialize auth state
+export const initializeAuth = async () => {
+  const authStore = useAuthStore.getState();
+  await authStore.fetchUser();
+};

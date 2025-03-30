@@ -1,0 +1,143 @@
+{
+  "expo": {
+    "name": "Dabbler",
+    "slug": "mixandfit",
+    "scheme": "dabbler",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/IconLogo.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD",
+      "url": "https://u.expo.dev/07484fce-db8e-4505-9512-c83c11d35186"
+    },
+    "apiUrl": {
+      "development": "https://dev-api.dabblerclub.com",
+      "preview": "https://dev-api.dabblerclub.com",
+      "staging": "https://dev-api.dabblerclub.com",
+      "production": "https://api.dabblerclub.com"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mixfit.mixandfit",
+      "associatedDomains": ["applinks:dabblerclub.com"],
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses location services to find nearby venues.",
+        "NSLocationAlwaysUsageDescription": "This app uses location services to provide notifications about venues you are close to.",
+        "NSPhotoLibraryUsageDescription": "Allow access to photos to upload profile pictures",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["dabbler"]
+          }
+        ],
+        "NSCameraUsageDescription": "This app uses the camera to scan payment cards.",
+        "NSFaceIDUsageDescription": "This app uses Face ID to secure payment information.",
+        "com.apple.developer.in-app-payments": ["merchant.com.mixfit.mixandfit"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/IconLogo.png",
+        "backgroundColor": "#191e24"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDgqOpCGS62WWYFk-pBEcBo6Rw8hlRaufg"
+        }
+      },
+      "package": "com.mixfit.mixandfit",
+      "versionCode": 1,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "dabbler",
+              "host": "*",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "dabbler",
+              "host": "profile",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "dabbler",
+              "host": "oauth-redirect",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/Artboard.png",
+          "imageWidth": 200,
+          "imageHeight": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#191e24"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "07484fce-db8e-4505-9512-c83c11d35186"
+      }
+    },
+    "owner": "dabbler",
+    "jsEngine": "hermes"
+  }
+}
