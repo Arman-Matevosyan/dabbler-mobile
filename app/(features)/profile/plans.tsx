@@ -3,16 +3,18 @@ import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { Colors } from '@/constants/Colors';
 import { usePlans, useSubscriptions } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
+import { Plan as AppPlan } from '@/types/types';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
@@ -26,32 +28,46 @@ interface Plan {
   venues: any[];
 }
 
-interface Subscription {
-  plan: {
-    planId: string;
-    name: string;
-    description: string;
-    price: number;
-  };
-  status: string;
-}
-
 export default function PlansProfileScreen() {
   const { plans, isLoading } = usePlans();
   const { colorScheme } = useTheme();
   const theme = Colors[colorScheme];
   const { subscription } = useSubscriptions();
   const { t } = useTranslation();
+  const [showAllPlans, setShowAllPlans] = useState(false);
+  const hasActivePlan = Boolean(subscription?.plan?.planId);
+  useEffect(() => {
+    setShowAllPlans(false);
+  }, [subscription]);
 
-  const renderPlanCard = (plan: Plan, index: number) => {
+  const plansToDisplay = useMemo(() => {
+    if (!plans || !Array.isArray(plans)) return [];
+
+    if (!hasActivePlan || showAllPlans) {
+      return plans;
+    }
+
+    if (subscription?.plan?.planId) {
+      return plans.filter(
+        (plan) =>
+          (plan as AppPlan).id === subscription.plan?.planId ||
+          (plan as AppPlan).planId === subscription.plan?.planId
+      );
+    }
+
+    return [];
+  }, [plans, subscription, hasActivePlan, showAllPlans]);
+
+  const renderPlanCard = (plan: AppPlan, index: number) => {
+    const planId = plan.id || plan.planId;
     const isPopular = index === 1;
-    const isActive = subscription?.plan?.planId === plan.id;
+    const isActive = subscription?.plan?.planId === planId;
 
     return (
       <Animated.View
         entering={FadeInUp.delay(index * 200)}
         style={[styles.cardContainer, isPopular && styles.popularCard]}
-        key={plan.id}
+        key={planId}
       >
         <View style={styles.badgesContainer}>
           {isPopular && (
@@ -144,7 +160,7 @@ export default function PlansProfileScreen() {
             ]}
             onPress={() =>
               !isActive &&
-              router.push(`/(features)/payments/payment?plan=${plan.id}`)
+              router.push(`/(features)/payments/payment?plan=${planId}`)
             }
             activeOpacity={1}
             disabled={isActive}
@@ -193,12 +209,42 @@ export default function PlansProfileScreen() {
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.textPrimary }]}>
-          {t('plans.chooseYourPlan')}
+          {hasActivePlan && !showAllPlans
+            ? t('plans.yourCurrentPlan')
+            : t('plans.chooseYourPlan')}
         </Text>
+
+        {hasActivePlan && !showAllPlans && (
+          <TouchableOpacity
+            style={[
+              styles.upgradeButton,
+              { backgroundColor: theme.accentPrimary },
+            ]}
+            onPress={() => setShowAllPlans(true)}
+          >
+            <Text style={styles.upgradeButtonText}>
+              {t('plans.upgradePlan')}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {hasActivePlan && showAllPlans && (
+          <TouchableOpacity
+            style={[styles.textButton]}
+            onPress={() => setShowAllPlans(false)}
+          >
+            <Text
+              style={[styles.textButtonText, { color: theme.accentPrimary }]}
+            >
+              {t('plans.showOnlyMyPlan')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
       <View style={styles.cardsContainer}>
-        {(plans as Plan[]).map((plan: Plan, index: number) =>
-          renderPlanCard(plan, index)
+        {plansToDisplay.map((plan, index) =>
+          renderPlanCard(plan as AppPlan, index)
         )}
       </View>
     </ScrollView>
@@ -224,7 +270,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 16,
+  },
+  upgradeButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  textButton: {
+    marginBottom: 16,
+  },
+  textButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
   cardsContainer: {
     paddingHorizontal: 20,

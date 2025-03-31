@@ -5,11 +5,12 @@ import { useTheme } from '@/providers/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
+import { CheckinClassesScreen } from '@/app/(features)/checkin/CheckinClassesScreen';
 import QrCheck from '@/components/svg/QrCheck';
 import { useCheckIn } from '@/hooks/checkin/useCheckIn';
 import { useTooltip } from '@/hooks/tooltip';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -27,24 +28,64 @@ export default function CheckinScreen() {
   const { colorScheme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
-  const { checkInMutation, isSuccess, isLoading } = useCheckIn();
+  const { checkInMutation, isSuccess, checkInData, isLoading } = useCheckIn();
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
   const tooltip = useTooltip();
-  
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (data) {
+  const params = useLocalSearchParams();
+  const urlParam = params.url as string | undefined;
+  const [showCheckInData, setShowCheckInData] = useState(false);
+  const didSetCheckInData = useRef(false);
+
+  useEffect(() => {
+    if (urlParam && isAuthenticated) {
+      processQrData(urlParam);
+    }
+  }, [urlParam, isAuthenticated]);
+
+  const processQrData = (data: string) => {
+    try {
+      if (data.includes('url')) {
+        const urlMatch = data.match(/url=([^&]+)/);
+        if (urlMatch && urlMatch[1]) {
+          const decodedUrl = decodeURIComponent(urlMatch[1]);
+          checkInMutation.mutate(decodedUrl);
+          return;
+        }
+      }
+
       checkInMutation.mutate(data);
+    } catch (error) {
+      tooltip.showError(t('checkin.scanError'), t('common.tryAgain'));
     }
   };
-  
+
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    if (!data) return;
+    processQrData(data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setScanning(false);
+        setShowCheckInData(false);
+        didSetCheckInData.current = false;
+      };
+    }, [])
+  );
+
   useEffect(() => {
-    if (isSuccess) {
+    if (isSuccess && checkInData && !didSetCheckInData.current) {
       tooltip.showSuccess(t('checkin.checkInSuccessful'));
       setScanning(false);
+
+      didSetCheckInData.current = true;
+
+      setShowCheckInData(true);
     }
-  }, [isSuccess, t, tooltip]);
-  
+  }, [isSuccess, checkInData, t, tooltip]);
+
   const handleScanPress = () => {
     if (!permission?.granted) {
       requestPermission();
@@ -55,7 +96,16 @@ export default function CheckinScreen() {
 
   const handleCloseScanner = () => {
     setScanning(false);
+
+    if (urlParam) {
+      router.replace('/(tabs)/checkin');
+    }
   };
+
+  const handleBackFromClassesScreen = useCallback(() => {
+    didSetCheckInData.current = false;
+    setShowCheckInData(false);
+  }, []);
 
   const renderScanner = () => {
     return (
@@ -160,6 +210,15 @@ export default function CheckinScreen() {
 
   if (!isAuthenticated) return renderLoginPrompt();
   if (scanning) return renderScanner();
+  if (showCheckInData && checkInData) {
+    return (
+      <CheckinClassesScreen
+        data={checkInData}
+        isLoading={false}
+        onBackPress={handleBackFromClassesScreen}
+      />
+    );
+  }
 
   return renderCheckinHome();
 }

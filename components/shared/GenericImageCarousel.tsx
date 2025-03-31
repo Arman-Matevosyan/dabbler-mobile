@@ -259,7 +259,7 @@ const GenericImageCarousel = ({
         <TouchableOpacity
           style={styles.favoriteButton}
           onPress={handleFavoritePress}
-          activeOpacity={0.7}
+          activeOpacity={0.6}
           disabled={isLoading}
         >
           {isLoading ? (
@@ -267,7 +267,7 @@ const GenericImageCarousel = ({
           ) : (
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
-              size={30}
+              size={28}
               color={isFavorite ? '#FF3B30' : 'white'}
             />
           )}
@@ -400,8 +400,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 20,
     right: 16,
-    zIndex: 1,
-    padding: 8,
+    zIndex: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   carouselNavButton: {
     position: 'absolute',

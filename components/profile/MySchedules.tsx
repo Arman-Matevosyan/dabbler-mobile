@@ -2,11 +2,20 @@ import Skeleton from '@/components/ui/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { useMyschedules } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import GirlDoingYoga from '../svg/GirlYoga';
 import { ThemedText } from '../ui/ThemedText';
 
@@ -17,14 +26,24 @@ interface ScheduleItem {
   duration: number;
   venue?: {
     name: string;
+    address?: {
+      street?: string;
+      city?: string;
+    };
   };
-  covers: string[];
+  covers: any[];
   instructorInfo: string;
+  instructorName?: string; // Added for compatibility
   categories: string[];
   level?: string;
   scheduled: boolean;
   scheduledSpots: number;
   totalSpots: number;
+  location?: {
+    type: string;
+    coordinates: number[];
+  };
+  cancellationPeriodInMinutes?: number;
 }
 
 export const MySchedules = () => {
@@ -86,7 +105,7 @@ export const MySchedules = () => {
   if (!hasSchedules) {
     return (
       <View style={styles.emptyStateContainer}>
-           <GirlDoingYoga width={200} height={200} />
+        <GirlDoingYoga width={200} height={200} />
 
         <Text style={styles.noClassesTitle}>
           {t('schedule.noUpcomingClasses')}
@@ -98,6 +117,32 @@ export const MySchedules = () => {
       </View>
     );
   }
+
+  const navigateToClassDetails = (schedule: ScheduleItem) => {
+    router.push({
+      pathname: '/classes/details/[id]',
+      params: { id: schedule.id, date: schedule.date },
+    });
+  };
+
+  const openGoogleMaps = (schedule: ScheduleItem) => {
+    // Check if location coordinates are available
+    if (schedule.location?.coordinates && schedule.location.coordinates.length === 2) {
+      const [longitude, latitude] = schedule.location.coordinates;
+      const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+      Linking.openURL(url).catch((err) =>
+        console.error('Error opening Google Maps:', err)
+      );
+    } 
+    // If no coordinates but venue name is available, search by venue name
+    else if (schedule.venue?.name) {
+      const venueQuery = encodeURIComponent(schedule.venue.name);
+      const url = `https://www.google.com/maps/search/?api=1&query=${venueQuery}`;
+      Linking.openURL(url).catch((err) =>
+        console.error('Error opening Google Maps:', err)
+      );
+    }
+  };
 
   return (
     <ScrollView>
@@ -114,15 +159,32 @@ export const MySchedules = () => {
           {schedules.map((schedule, index) => {
             const scheduleDate = new Date(schedule.date);
             const day = format(scheduleDate, 'EEE');
-            const monthDay = format(scheduleDate, 'MMM d');
+            const monthDay = format(scheduleDate, 'dd MMM');
             const startTime = format(scheduleDate, 'HH:mm');
             const endTime = format(
               new Date(scheduleDate.getTime() + schedule.duration * 60 * 1000),
               'HH:mm'
             );
 
+            // Calculate cancellation deadline
+            const cancelMinutes =
+              schedule.cancellationPeriodInMinutes || 24 * 60; // Default 24 hours
+            const cancelDate = new Date(
+              scheduleDate.getTime() - cancelMinutes * 60000
+            );
+            const cancelDateStr = format(cancelDate, 'EEE, d MMM HH:mm');
+
+            const hasLocationCoordinates = Boolean(
+              schedule.location?.coordinates?.length === 2
+            );
+
             return (
-              <View key={index} style={styles.scheduleItem}>
+              <TouchableOpacity
+                key={index}
+                style={styles.scheduleItem}
+                onPress={() => navigateToClassDetails(schedule)}
+                activeOpacity={1}
+              >
                 <View style={styles.imageContainer}>
                   {schedule.covers && schedule.covers.length > 0 ? (
                     <Image
@@ -155,17 +217,38 @@ export const MySchedules = () => {
                     {`${day}, ${monthDay} - ${startTime}-${endTime}`}
                   </Text>
 
-                  <Text style={styles.venue}>{schedule.venue?.name || ''}</Text>
+                  <View style={styles.venueContainer}>
+                    <Text style={styles.venue}>
+                      {schedule.venue?.name || ''}
+                    </Text>
+
+                    {/* Map button - always show it */}
+                    <TouchableOpacity
+                      style={styles.mapButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        openGoogleMaps(schedule);
+                      }}
+                    >
+                      <Ionicons
+                        name="map-outline"
+                        size={20}
+                        color={colors.tint}
+                      />
+                    </TouchableOpacity>
+                  </View>
 
                   {schedule.instructorInfo && (
                     <View style={styles.instructorContainer}>
-                      <MaterialCommunityIcons
-                        name="account"
+                      <Ionicons
+                        name="person-outline"
                         size={16}
                         color="#CCCCCC"
                       />
                       <Text style={styles.instructor}>
-                        {schedule.instructorInfo}
+                        {schedule.instructorInfo ||
+                          schedule.instructorName ||
+                          t('classes.instructor')}
                       </Text>
                     </View>
                   )}
@@ -173,7 +256,7 @@ export const MySchedules = () => {
                   {schedule.categories && schedule.categories.length > 0 && (
                     <View style={styles.categoryContainer}>
                       <MaterialCommunityIcons
-                        name="tag"
+                        name="tag-outline"
                         size={16}
                         color="#CCCCCC"
                       />
@@ -182,8 +265,16 @@ export const MySchedules = () => {
                       </Text>
                     </View>
                   )}
+
+                  {/* Booked status */}
+                  <View style={styles.statusContainer}>
+                    <View style={styles.bookedStatusDot} />
+                    <Text style={styles.bookedStatusText}>
+                      {t('schedule.booked')}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -218,45 +309,12 @@ const styles = StyleSheet.create({
   schedulesContainer: {
     marginTop: 16,
   },
-  // Empty state styling - like image 1
+  // Empty state styling
   emptyStateContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
     marginTop: 40,
-  },
-  blobContainer: {
-    width: 160,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    marginBottom: 30,
-    overflow: 'hidden',
-  },
-  dumbbellsContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  dumbbell1: {
-    position: 'absolute',
-    top: '25%',
-    left: '35%',
-    transform: [{ rotate: '-30deg' }],
-  },
-  dumbbell2: {
-    position: 'absolute',
-    top: '45%',
-    left: '45%',
-    transform: [{ rotate: '0deg' }],
-  },
-  dumbbell3: {
-    position: 'absolute',
-    top: '65%',
-    left: '35%',
-    transform: [{ rotate: '30deg' }],
   },
   noClassesTitle: {
     fontSize: 18,
@@ -308,10 +366,19 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     marginBottom: 4,
   },
+  venueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   venue: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: 4,
+    flex: 1,
+  },
+  mapButton: {
+    padding: 4,
   },
   instructorContainer: {
     flexDirection: 'row',
@@ -326,10 +393,29 @@ const styles = StyleSheet.create({
   categoryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 6,
   },
   category: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
     marginLeft: 4,
+  },
+  // Booked status styling
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  bookedStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50', // Green color for booked status
+    marginRight: 6,
+  },
+  bookedStatusText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#4CAF50',
   },
 });

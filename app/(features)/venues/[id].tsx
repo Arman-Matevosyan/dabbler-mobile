@@ -189,6 +189,7 @@ export default function VenueDetailsScreen() {
           style={styles.fixedHeaderButton}
           onPress={handleToggleFavorite}
           disabled={favoritesLoading}
+          activeOpacity={1}
         >
           {favoritesLoading ? (
             <ActivityIndicator size="small" color="#FF3B30" />
@@ -196,7 +197,7 @@ export default function VenueDetailsScreen() {
             <Ionicons
               name={isFavoriteState ? 'heart' : 'heart-outline'}
               size={26}
-              color={isFavoriteState ? '#FF3B30' : colors.textPrimary}
+              color={isFavoriteState ? '#FF3B30' : 'white'}
             />
           )}
         </TouchableOpacity>
@@ -729,11 +730,12 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   fixedHeaderButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
+    marginHorizontal: 4,
   },
   fixedHeaderTitle: {
     fontSize: 18,

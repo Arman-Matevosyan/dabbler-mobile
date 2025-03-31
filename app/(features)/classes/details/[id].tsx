@@ -1,29 +1,40 @@
-import { BookingConfirmationPanel } from '@/components/classes';
+import {
+  BookingConfirmationPanel,
+  BookingStatusBottomSheet,
+  CancellationConfirmationPanel,
+} from '@/components/classes';
 import GenericImageCarousel from '@/components/shared/GenericImageCarousel';
 import { Colors } from '@/constants/Colors';
 import { darkMapStyle } from '@/constants/MapColors';
-import { useTooltip, useUserProfile } from '@/hooks';
+import { useMyschedules, useTooltip, useUserProfile } from '@/hooks';
 import { useClassDetails } from '@/hooks/classes/useClassDetails';
 import { useTheme } from '@/providers/ThemeContext';
-import { Entypo, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Animated,
-    Dimensions,
-    Image,
-    Linking,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
+
+// Custom type for scheduled classes
+interface ScheduledClass {
+  id: string;
+  scheduled: boolean;
+  // other properties as needed
+}
 
 export default function ClassDetailsScreen() {
   const params = useLocalSearchParams();
@@ -39,8 +50,23 @@ export default function ClassDetailsScreen() {
     classData,
     isLoading: classLoading,
     error,
+    refetch,
   } = useClassDetails({ id, date });
   const [isBookingPanelVisible, setIsBookingPanelVisible] = useState(false);
+  const [isCancellationPanelVisible, setIsCancellationPanelVisible] =
+    useState(false);
+  const [showSuccessBottomSheet, setShowSuccessBottomSheet] = useState(false);
+  const [showCancelBottomSheet, setShowCancelBottomSheet] = useState(false);
+  const { data: schedulesData, refetch: refetchSchedules } = useMyschedules();
+
+  // Check if class is already booked
+  const isClassBooked = useMemo(() => {
+    if (!schedulesData || !classData) return false;
+
+    return (schedulesData as ScheduledClass[]).some(
+      (schedule) => schedule.id === classData.id && schedule.scheduled === true
+    );
+  }, [schedulesData, classData]);
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 200],
@@ -55,6 +81,11 @@ export default function ClassDetailsScreen() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  useEffect(() => {
+    // Refetch schedules when screen is focused
+    refetchSchedules();
+  }, [refetchSchedules]);
 
   const closeScreen = () => {
     Animated.timing(scrollY, {
@@ -72,6 +103,55 @@ export default function ClassDetailsScreen() {
       return;
     }
     setIsBookingPanelVisible(true);
+  };
+
+  const handleCancelBooking = () => {
+    if (!isAuthenticated) {
+      showError(t('classes.authentication'), t('classes.loginToCancel'));
+      return;
+    }
+    // Open the cancellation panel directly
+    setIsCancellationPanelVisible(true);
+  };
+
+  const handleCancellationSuccess = () => {
+    setIsCancellationPanelVisible(false);
+
+    setTimeout(() => {
+      setShowCancelBottomSheet(true);
+      refetchSchedules();
+      refetch();
+    }, 300);
+  };
+
+  const handleBookingSuccess = () => {
+    setIsBookingPanelVisible(false);
+
+    setTimeout(() => {
+      setShowSuccessBottomSheet(true);
+      refetchSchedules();
+      refetch();
+    }, 300);
+  };
+
+  const handleShare = async () => {
+    if (!classData) return;
+
+    const classDate = new Date(classData.date || '');
+    const formattedDate = format(classDate, 'EEE, dd MMM');
+    const startTime = format(classDate, 'HH:mm');
+    const endTime = format(
+      new Date(classDate.getTime() + (classData.duration || 0) * 60000),
+      'HH:mm'
+    );
+
+    try {
+      await Share.share({
+        message: `Join me for ${classData.name} at ${classData.venue?.name} on ${formattedDate} from ${startTime} to ${endTime}!`,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
   };
 
   if (classLoading) {
@@ -146,35 +226,29 @@ export default function ClassDetailsScreen() {
     }
   }
 
+  // Calculate cancellation deadline
+  const cancelMinutes = 240; // Default to 4 hours
+  const classDate = new Date(classData.date || '');
+  const cancelDate = new Date(classDate.getTime() - cancelMinutes * 60000);
+  const cancelDateStr = format(cancelDate, 'EEE, d MMM HH:mm');
+
   const availableSpots = classData.scheduledSpots ?? 0;
   const totalSpots = classData.totalSpots || 0;
-  const spotDisplay = `${availableSpots}/${totalSpots} ${t(
-    'classes.spotsLeft'
-  )}`;
-  const coverImageUrl =
-    classData.covers && classData.covers.length > 0
-      ? classData.covers[0].url || classData.covers[0].uri
-      : 'https://images.unsplash.com/photo-1518611012118-696072aa579a';
-  const goToVenue = () => {
-    if (classData.venue && classData.venue.id) {
-      router.push(`/venues/${classData.venue.id}`);
-    }
-  };
 
-  const openWebsite = () => {
-    if (classData.venue && classData.venue.websiteUrl) {
-      Linking.openURL(classData.venue.websiteUrl);
-    }
-  };
+  let spotDisplay;
+  if (classData.isFree) {
+    spotDisplay = t('classes.free');
+  } else {
+    const remainingSpots = totalSpots - availableSpots;
+    spotDisplay = `${remainingSpots} / ${totalSpots} ${t('classes.spotsLeft')}`;
+  }
 
+  // render the map
   const renderMap = () => {
-    const latitude = classData?.location?.coordinates[1];
-    const longitude = classData?.location?.coordinates[0];
-    if (!longitude || !latitude) {
+    if (!classData.location) {
       return (
-        <View
-          style={[styles.mapContainer, { backgroundColor: colors.background }]}
-        >
+        <View style={styles.noMapContainer}>
+          <Ionicons name="map-outline" size={60} color={colors.textSecondary} />
           <Text style={[styles.noMapText, { color: colors.textSecondary }]}>
             {t('classes.mapNotAvailable')}
           </Text>
@@ -182,35 +256,51 @@ export default function ClassDetailsScreen() {
       );
     }
 
+    const lat = classData.location.coordinates[1];
+    const lng = classData.location.coordinates[0];
+
     return (
       <MapView
-        style={styles.map}
         provider={PROVIDER_GOOGLE}
-        customMapStyle={darkMapStyle}
+        style={styles.map}
+        customMapStyle={colorScheme === 'dark' ? darkMapStyle : []}
         initialRegion={{
-          latitude: latitude,
-          longitude: longitude,
+          latitude: lat,
+          longitude: lng,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        pitchEnabled={false}
-        rotateEnabled={false}
       >
         <Marker
-          coordinate={{ latitude, longitude }}
+          coordinate={{
+            latitude: lat,
+            longitude: lng,
+          }}
           title={classData.venue?.name || ''}
         >
           <MaterialCommunityIcons
             name="map-marker"
-            size={38}
-            color={colors.pinColor}
+            size={40}
+            color={colors.tint}
           />
         </Marker>
       </MapView>
     );
   };
+
+  const goToVenue = () => {
+    if (classData.venue && classData.venue.id) {
+      router.push({
+        pathname: '/venues/[id]',
+        params: { id: classData.venue.id },
+      });
+    }
+  };
+
+  const coverImageUrl =
+    classData.venue && classData.venue.id
+      ? `https://picsum.photos/400/200?random=${classData.venue.id}`
+      : 'https://picsum.photos/400/200';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -288,6 +378,58 @@ export default function ClassDetailsScreen() {
               {classData.instructorName || t('classes.instructor')}
             </Text>
           </View>
+
+          {/* Show booking confirmation UI if booked but not when showing bottom sheets */}
+          {isClassBooked &&
+            !showSuccessBottomSheet &&
+            !showCancelBottomSheet && (
+              <View style={styles.bookingConfirmedContainer}>
+                <View style={styles.bookingConfirmedHeader}>
+                  <Text style={styles.bookingConfirmedTitle}>
+                    {t('classes.bookingConfirmed', 'Booking confirmed')}
+                  </Text>
+                </View>
+                <View style={styles.bookingConfirmedContent}>
+                  <Text style={styles.bookingConfirmedMessage}>
+                    {t(
+                      'classes.bookingConfirmedMessage',
+                      "See you soon! Please check the venue or class details to ensure you're fully prepared for the session."
+                    )}
+                  </Text>
+                  <TouchableOpacity style={styles.addToCalendarButton}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color="white"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.addToCalendarText}>
+                      {t('classes.addToCalendar', 'Add to Calendar')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+          {/* Show cancellation info when booked but not when showing bottom sheets */}
+          {isClassBooked &&
+            !showSuccessBottomSheet &&
+            !showCancelBottomSheet && (
+              <View style={styles.cancellationInfoContainer}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={16}
+                  color="#3B82F6"
+                />
+                <Text style={styles.cancellationInfoText}>
+                  {t(
+                    'classes.cancelBefore',
+                    'Cancel before {{date}} to avoid fees',
+                    { date: cancelDateStr }
+                  )}
+                </Text>
+              </View>
+            )}
 
           {classData.description && (
             <View style={styles.sectionContainer}>
@@ -367,161 +509,23 @@ export default function ClassDetailsScreen() {
                 </View>
               </TouchableOpacity>
             )}
-
-            {classData.venue && classData.venue.openingHours && (
-              <View style={styles.metadataItem}>
-                <Ionicons
-                  name="time-outline"
-                  size={20}
-                  color={colors.tint}
-                  style={styles.metadataIcon}
-                />
-                <Text
-                  style={[styles.metadataText, { color: colors.textPrimary }]}
-                >
-                  {t('venues.openingHours')}: Die Öffnungszeiten hängen von de...
-                </Text>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={20}
-                  color={colors.tint}
-                  style={{ marginLeft: 8 }}
-                />
-              </View>
-            )}
-
-            <View style={styles.ratingsContainer}>
-              <View style={styles.starsContainer}>
-                <Ionicons
-                  name="star-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-                <Ionicons
-                  name="star-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-                <Ionicons
-                  name="star-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-                <Ionicons
-                  name="star-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-                <Ionicons
-                  name="star-outline"
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </View>
-              <Text
-                style={[styles.ratingsText, { color: colors.textSecondary }]}
-              >
-                {t('venues.noRatingsYet')}
-              </Text>
-            </View>
-
-            {classData.venue && classData.venue.websiteUrl && (
-              <TouchableOpacity
-                style={styles.websiteButton}
-                onPress={openWebsite}
-              >
-                <Entypo name="globe" size={20} color={colors.tint} />
-                <Text style={styles.websiteText}>{t('venues.website')}</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {classData.importantInfo && (
             <View style={styles.sectionContainer}>
-              <View style={styles.sectionHeader}>
-                <Text
-                  style={[styles.sectionTitle, { color: colors.textPrimary }]}
-                >
-                  {t('venues.importantInfo')}
-                </Text>
-              </View>
-              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                {classData.importantInfo}
-              </Text>
-
-              {classData.date && (
-                <View style={styles.cancellationContainer}>
-                  <Text
-                    style={[
-                      styles.cancellationLabel,
-                      { color: colors.textPrimary },
-                    ]}
-                  >
-                    {t('classes.cancellationPeriod')}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.cancellationValue,
-                      { color: colors.textPrimary },
-                    ]}
-                  >
-                    11 {t('classes.hours')}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {!classData.isFree && (
-            <View style={styles.sectionContainer}>
               <Text
                 style={[styles.sectionTitle, { color: colors.textPrimary }]}
               >
-                {t('classes.visitLimits')}
+                {t('classes.importantInfo', 'Important Info')}
               </Text>
-
-              <View style={styles.visitsCard}>
-                <View style={styles.visitsHeader}>
-                  <Text
-                    style={[styles.visitsTitle, { color: colors.textPrimary }]}
-                  >
-                    {t('classes.totalVisits')}
-                  </Text>
-                  <View style={styles.visitPeriodBadge}>
-                    <Text style={styles.visitPeriodText}>{t('classes.perMonth')}</Text>
-                  </View>
-                </View>
-
-                <Text
-                  style={[styles.visitsCount, { color: colors.textPrimary }]}
-                >
-                  {spotDisplay}
-                </Text>
-
-                <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: '0%' }]} />
-                  </View>
-                  <View style={styles.progressLabels}>
-                    <Text
-                      style={[
-                        styles.progressLabel,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {availableSpots}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.progressLabel,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {totalSpots}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <Text
+                style={[
+                  styles.descriptionText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                {classData.importantInfo}
+              </Text>
             </View>
           )}
 
@@ -530,7 +534,7 @@ export default function ClassDetailsScreen() {
               {t('classes.location')}
             </Text>
 
-            <TouchableOpacity style={styles.mapContainer} activeOpacity={1}>
+            <TouchableOpacity style={styles.mapContainer}>
               {renderMap()}
             </TouchableOpacity>
           </View>
@@ -546,26 +550,48 @@ export default function ClassDetailsScreen() {
           },
         ]}
       >
-        <Text style={[styles.spotsText, { color: colors.textPrimary }]}>
-          {spotDisplay}
-        </Text>
-        <TouchableOpacity
-          style={[
-            styles.bookButton,
-            {
-              backgroundColor:
-                availableSpots !== totalSpots ? colors.tint : colors.secondary,
-            },
-          ]}
-          onPress={handleBookClass}
-          disabled={availableSpots === totalSpots}
-        >
-          <Text style={styles.bookButtonText}>
-            {availableSpots !== totalSpots
-              ? t('classes.bookClass')
-              : t('schedule.booked')}
-          </Text>
-        </TouchableOpacity>
+        {!isClassBooked ? (
+          <>
+            <Text style={[styles.spotsText, { color: colors.textPrimary }]}>
+              {spotDisplay}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.bookButton,
+                {
+                  backgroundColor:
+                    availableSpots !== totalSpots
+                      ? colors.tint
+                      : colors.secondary,
+                },
+              ]}
+              onPress={handleBookClass}
+              disabled={availableSpots === totalSpots}
+            >
+              <Text style={styles.bookButtonText}>
+                {availableSpots !== totalSpots
+                  ? t('classes.bookClass')
+                  : t('schedule.booked')}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.bookedActionsContainer}>
+            <Text
+              style={[styles.bookedStatusText, { color: colors.textPrimary }]}
+            >
+              {t('schedule.booked')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: '#FF3B30' }]}
+              onPress={handleCancelBooking}
+            >
+              <Text style={styles.bookButtonText}>
+                {t('classes.cancelBooking', 'Cancel Booking')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {isBookingPanelVisible && (
@@ -575,7 +601,97 @@ export default function ClassDetailsScreen() {
           classData={classData}
           classDetail={classData}
           colors={colors}
+          onBookingSuccess={handleBookingSuccess}
         />
+      )}
+
+      {isCancellationPanelVisible && (
+        <CancellationConfirmationPanel
+          visible={isCancellationPanelVisible}
+          onClose={() => setIsCancellationPanelVisible(false)}
+          classData={classData}
+          classDetail={classData}
+          colors={{ ...colors, errorColor: '#FF3B30' }}
+          onCancellationSuccess={handleCancellationSuccess}
+        />
+      )}
+
+      {classData && (
+        <>
+          <BookingStatusBottomSheet
+            visible={showSuccessBottomSheet}
+            onClose={() => {
+              setShowSuccessBottomSheet(false);
+              refetch();
+              refetchSchedules();
+            }}
+            type="success"
+            colors={{
+              background: colors.background,
+              textPrimary: colors.textPrimary,
+              textSecondary: colors.textSecondary,
+              successColor: '#4CAF50',
+              buttonColor: colors.tint,
+              backdropColor: 'rgba(0,0,0,0.7)',
+            }}
+            classData={{
+              name: classData.name,
+              date: classData.date
+                ? (() => {
+                    const classDate = new Date(classData.date);
+                    const formattedDate = format(classDate, 'EEE, dd MMM');
+                    const startTime = format(classDate, 'HH:mm');
+                    const endTime = classData.duration
+                      ? format(
+                          new Date(
+                            classDate.getTime() + classData.duration * 60000
+                          ),
+                          'HH:mm'
+                        )
+                      : '';
+                    return `${formattedDate} ${startTime}${
+                      endTime ? ` - ${endTime}` : ''
+                    }`;
+                  })()
+                : undefined,
+              venue: classData.venue
+                ? {
+                    name: classData.venue.name,
+                  }
+                : undefined,
+            }}
+            onAddToCalendar={() => {
+              setShowSuccessBottomSheet(false);
+            }}
+          />
+
+          <BookingStatusBottomSheet
+            visible={showCancelBottomSheet}
+            onClose={() => {
+              setShowCancelBottomSheet(false);
+              // Refresh class status after closing
+              refetch();
+              refetchSchedules();
+            }}
+            type="cancelled"
+            colors={{
+              background: colors.background,
+              textPrimary: colors.textPrimary,
+              textSecondary: colors.textSecondary,
+              successColor: '#4CAF50',
+              buttonColor: colors.tint,
+              backdropColor: 'rgba(0,0,0,0.7)',
+            }}
+            classData={{
+              name: classData.name,
+              venue: classData.venue
+                ? {
+                    name: classData.venue.name,
+                  }
+                : undefined,
+            }}
+          />
+        </>
       )}
     </View>
   );
@@ -683,11 +799,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 20,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  tryAgainButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  tryAgainButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   sectionContainer: {
-    marginBottom: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -699,9 +850,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  sectionAction: {
-    padding: 4,
-  },
+  sectionAction: {},
   viewMoreText: {
     color: '#3B82F6',
     fontSize: 14,
@@ -709,23 +858,22 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: 15,
     lineHeight: 22,
-    marginBottom: 8,
   },
   readMoreText: {
+    marginTop: 8,
     color: '#3B82F6',
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: '600',
   },
   venueCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   venueImage: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
   },
   venueDetails: {
     flex: 1,
@@ -743,182 +891,121 @@ const styles = StyleSheet.create({
   venueCity: {
     fontSize: 14,
   },
-  metadataItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  metadataIcon: {
-    marginRight: 10,
-    width: 24,
-    alignItems: 'center',
-  },
-  metadataText: {
-    fontSize: 14,
-    flex: 1,
-  },
-  ratingsContainer: {
-    marginBottom: 16,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  ratingsText: {
-    fontSize: 14,
-  },
-  websiteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  websiteText: {
-    color: '#3B82F6',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  infoText: {
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  cancellationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cancellationLabel: {
-    fontSize: 15,
-  },
-  cancellationValue: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  visitsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 8,
-  },
-  visitsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  visitsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  visitPeriodBadge: {
-    backgroundColor: 'rgba(72, 187, 120, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  visitPeriodText: {
-    color: '#48BB78',
-    fontSize: 12,
-  },
-  visitsCount: {
-    fontSize: 15,
-    marginBottom: 12,
-  },
-  progressBarContainer: {
-    marginTop: 8,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#3B82F6',
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  progressLabel: {
-    fontSize: 12,
-  },
   mapContainer: {
     height: 200,
-    marginHorizontal: 16,
-    marginVertical: 8,
     borderRadius: 12,
     overflow: 'hidden',
+    marginTop: 8,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  noMapContainer: {
+    height: 200,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  map: {
-    width: '100%',
-    height: '100%',
-  },
   noMapText: {
+    marginTop: 12,
     fontSize: 16,
-    textAlign: 'center',
   },
   footerContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     borderTopWidth: 1,
   },
   spotsText: {
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '500',
   },
   bookButton: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   bookButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Booking confirmed styling
+  bookingConfirmedContainer: {
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-  },
-  errorContainer: {
-    flex: 1,
+  bookingConfirmedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#222429',
     padding: 16,
   },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  errorText: {
+  bookingConfirmedTitle: {
     fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
+    fontWeight: '600',
+    color: 'white',
   },
-  tryAgainButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  bookingConfirmedContent: {
+    padding: 16,
+    backgroundColor: '#2A2C32',
+  },
+  bookingConfirmedMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 16,
+  },
+  addToCalendarButton: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    marginTop: 16,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
-  tryAgainButtonText: {
+  addToCalendarText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Cancellation info styling
+  cancellationInfoContainer: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  cancellationInfoText: {
+    fontSize: 14,
+    color: '#3B82F6',
+    marginLeft: 8,
+    flex: 1,
+  },
+  // Booked actions styling
+  bookedActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  bookedStatusText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#4CAF50',
   },
 });

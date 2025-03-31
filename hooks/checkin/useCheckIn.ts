@@ -1,19 +1,18 @@
 import { axiosClient } from '@/api';
 import { useMutation } from '@tanstack/react-query';
 
-const fetchCheckIn = async (url) => {
+const fetchCheckIn = async (url: string) => {
   try {
     const response = await axiosClient.get(url);
     return response?.data?.response;
   } catch (error) {
-    console.error('Error booking class:', error);
     throw error;
   }
 };
 
 export function useCheckIn() {
-  const mutation = useMutation({
-    mutationFn: (url) => {
+  const mutation = useMutation<any, Error, string>({
+    mutationFn: (url: string) => {
       return fetchCheckIn(url);
     },
     retry: 0,

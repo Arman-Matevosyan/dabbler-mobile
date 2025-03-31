@@ -97,3 +97,75 @@ yarn install
 # Using expo
 npx expo install
 ```
+
+# Dabbler Mobile Authentication Implementation
+
+## Authentication Flow
+
+The authentication system in Dabbler Mobile is built with a robust token-based approach:
+
+### Core Components
+
+1. **Token Management**
+   - `SecureStore`: Used for secure storage of tokens on the device
+   - `Zustand` store: Central state management for authentication
+   - `Axios` interceptors: Handle token attaching and automatic refresh
+
+2. **Social Authentication**
+   - Support for Google and Facebook login
+   - Handles deep linking with `Expo` for social auth callbacks
+   - Supports multiple URL schemes: `dabbler://` and `dabler://`
+
+3. **Token Refresh**
+   - Automatic refresh when 401 errors are encountered
+   - Request queueing to prevent multiple refresh calls
+   - Automatic retry of failed requests
+
+4. **React Query Integration**
+   - Query invalidation after token refresh
+   - Global error handling for auth failures
+
+## Key Files
+
+- `api/axiosClient.ts`: Axios instance with token refresh interceptors
+- `store/authStore.ts`: Zustand store for auth state management
+- `services/auth/socialAuth.ts`: Social auth flow helpers
+- `providers/AuthProvider.tsx`: React context for auth state and deep link handling
+- `services/query/queryClient.ts`: React Query configuration
+
+## Authentication Flow
+
+1. **Login Flow**:
+   - User logs in with email/password or social provider
+   - Access token and refresh token are stored in SecureStore
+   - User is redirected to authenticated area
+
+2. **API Request Flow**:
+   - Axios interceptor attaches token to all requests
+   - On 401 error, refresh token is used to get new access token
+   - Original request is retried with the new token
+
+3. **Social Auth Flow**:
+   - Social login redirects to browser for authentication
+   - After auth, browser redirects back to app with tokens
+   - App processes tokens and updates auth state
+
+4. **Token Refresh Flow**:
+   - When access token expires, server returns 401
+   - Axios interceptor catches 401 and tries to refresh token
+   - If refresh succeeds, request is retried with new token
+   - If refresh fails, user is logged out
+
+## Security Features
+
+- Tokens stored in SecureStore (encrypted storage)
+- No tokens in app state (only in secure storage)
+- Automatic logout on refresh token expiry
+- Request queueing to prevent duplicate refresh calls
+
+## Customization
+
+To add new authentication providers or methods:
+1. Add provider details to AuthAPI in `services/api.ts`
+2. Update the handleSocialLogin method in `store/authStore.ts`
+3. Configure proper URL handling in app.json

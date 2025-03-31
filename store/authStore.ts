@@ -1,13 +1,7 @@
-import { AuthAPI, UserAPI } from '@/services/api';
+import { AuthAPI, AuthResponse, UserAPI } from '@/services/api';
 import { User } from '@/types/types';
-import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
-
-interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-}
 
 export interface AuthState {
   user: User | null;
@@ -24,6 +18,9 @@ export interface AuthState {
   ) => Promise<void>;
   logout: () => Promise<void>;
   refreshTokens: () => Promise<boolean>;
+  setTokens: (accessToken: string, refreshToken?: string) => Promise<void>;
+  getAccessToken: () => Promise<string | null>;
+  getRefreshToken: () => Promise<string | null>;
   handleSocialLogin: (
     type: 'google' | 'facebook',
     token?: string
@@ -43,12 +40,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       const response = await AuthAPI.login(email, password);
-
-      await SecureStore.setItemAsync('accessToken', response.accessToken);
-      await SecureStore.setItemAsync('refreshToken', response.refreshToken);
-
+      await get().setTokens(response.accessToken, response.refreshToken);
       await get().fetchUser();
-      router.push('/(tabs)/profile/authenticated');
       set({ isAuthenticated: true, isLoading: false });
     } catch (error) {
       set({ isLoading: false });
@@ -71,12 +64,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         lastName
       );
 
-      await SecureStore.setItemAsync('accessToken', response.accessToken);
-      await SecureStore.setItemAsync('refreshToken', response.refreshToken);
-
+      await get().setTokens(response.accessToken, response.refreshToken);
       await get().fetchUser();
       await get().verifyEmail();
-      router.push('/(tabs)/profile/authenticated');
       set({ isAuthenticated: true, isLoading: false });
     } catch (error) {
       set({ isLoading: false });
@@ -97,26 +87,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  setTokens: async (accessToken: string, refreshToken?: string) => {
+    await SecureStore.setItemAsync('accessToken', accessToken);
+    if (refreshToken) {
+      await SecureStore.setItemAsync('refreshToken', refreshToken);
+    }
+    set({ isAuthenticated: true });
+  },
+
+  getAccessToken: async () => {
+    return SecureStore.getItemAsync('accessToken');
+  },
+
+  getRefreshToken: async () => {
+    return SecureStore.getItemAsync('refreshToken');
+  },
+
   refreshTokens: async () => {
     try {
-      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+      const refreshToken = await get().getRefreshToken();
       if (!refreshToken) return false;
 
       const response = await AuthAPI.refreshToken(refreshToken);
-
-      await SecureStore.setItemAsync('accessToken', response.accessToken);
-      if (response.refreshToken) {
-        await SecureStore.setItemAsync('refreshToken', response.refreshToken);
-      }
-
+      await get().setTokens(response.accessToken, response.refreshToken);
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
-
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
       set({ user: null, isAuthenticated: false });
-
       return false;
     }
   },
@@ -130,17 +129,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (token) {
       try {
-        // Remove debug alert
-        // Alert.alert(token, type);
         const response = await AuthAPI.refreshToken(token);
-
-        await SecureStore.setItemAsync('accessToken', response.accessToken);
-        await SecureStore.setItemAsync('refreshToken', response.refreshToken);
-
+        await get().setTokens(response.accessToken, response.refreshToken);
         await get().fetchUser();
         set({ isAuthenticated: true, socialLoading: null });
-
-        // Return the response for further processing
         return response;
       } catch (error) {
         set({ socialLoading: null });

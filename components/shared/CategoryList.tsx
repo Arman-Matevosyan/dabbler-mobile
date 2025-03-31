@@ -44,36 +44,58 @@ export const CategoryList = ({
   const { categories, isLoading: isCategoriesLoading } = useCategories();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const searchInputRef = useRef<TextInput>(null);
+  const isManualDismiss = useRef<boolean>(false);
+  const hasBeenVisible = useRef<boolean>(false);
 
   const [categorySearchValue, setCategorySearchValue] = useState('');
   const [localSelectedCategories, setLocalSelectedCategories] = useState<
     string[]
   >(initialSelectedCategories);
   const [isSheetReady, setIsSheetReady] = useState(false);
+  const [localIsVisible, setLocalIsVisible] = useState(isVisible);
 
   const snapPoints = useMemo(() => ['100%'], []);
 
+  // Track local visibility state separately
+  useEffect(() => {
+    if (isVisible && !localIsVisible) {
+      setLocalIsVisible(true);
+    } else if (!isVisible && localIsVisible && isManualDismiss.current) {
+      setLocalIsVisible(false);
+    }
+  }, [isVisible, localIsVisible]);
+
   // Handle sheet presentation
   useEffect(() => {
-    if (isVisible) {
+    if (localIsVisible) {
       if (!isSheetReady) {
         // Initial mount delay
         setTimeout(() => {
           bottomSheetRef.current?.present();
           setIsSheetReady(true);
+          hasBeenVisible.current = true;
         }, 100);
       } else {
         bottomSheetRef.current?.present();
+        hasBeenVisible.current = true;
       }
 
       // Reset state when opening
       setLocalSelectedCategories(initialSelectedCategories);
       setCategorySearchValue('');
-      setTimeout(() => searchInputRef.current?.focus(), 200);
-    } else {
+      
+      // Focus the search input after a delay
+      if (hasBeenVisible.current) {
+        setTimeout(() => searchInputRef.current?.focus(), 200);
+      }
+      
+      // Reset manual dismiss flag when opening
+      isManualDismiss.current = false;
+    } else if (isSheetReady && hasBeenVisible.current && isManualDismiss.current) {
+      // Only dismiss if it was a manual action and the sheet has been visible before
       bottomSheetRef.current?.dismiss();
     }
-  }, [isVisible, initialSelectedCategories, isSheetReady]);
+  }, [localIsVisible, initialSelectedCategories, isSheetReady]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -91,8 +113,16 @@ export const CategoryList = ({
   }, [categories, categorySearchValue]);
 
   const handleDismissModal = useCallback(() => {
+    isManualDismiss.current = true;
+    setLocalIsVisible(false);
     bottomSheetRef.current?.dismiss();
     onDismiss();
+  }, [onDismiss]);
+
+  const handleSheetDismiss = useCallback(() => {
+    if (isManualDismiss.current) {
+      onDismiss();
+    }
   }, [onDismiss]);
 
   const handleToggleCategory = (categoryName: string) => {
@@ -112,6 +142,8 @@ export const CategoryList = ({
 
   const handleConfirm = () => {
     onConfirm?.(localSelectedCategories);
+    isManualDismiss.current = true;
+    setLocalIsVisible(false);
     handleDismissModal();
   };
 
@@ -122,6 +154,10 @@ export const CategoryList = ({
         appearsOnIndex={0}
         disappearsOnIndex={-1}
         pressBehavior="close"
+        onPress={() => {
+          isManualDismiss.current = true;
+          props.onPress?.();
+        }}
       />
     ),
     []
@@ -138,7 +174,7 @@ export const CategoryList = ({
       handleIndicatorStyle={{ backgroundColor: colors.border }}
       backdropComponent={renderBackdrop}
       enableOverDrag={false}
-      onDismiss={handleDismissModal}
+      onDismiss={handleSheetDismiss}
     >
       <BottomSheetView style={styles.bottomSheetContent}>
         <View

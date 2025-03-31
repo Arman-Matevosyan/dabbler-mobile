@@ -4,7 +4,6 @@ import { Colors } from '@/constants/Colors';
 import { signupFields } from '@/constants/FormFields';
 import { useSignupForm } from '@/hooks/auth/useSignupForm';
 import { useStatusBarHeight } from '@/hooks/useStatusBarHeight';
-import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -12,17 +11,17 @@ import { useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TextInputProps,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface FloatingLabelInputProps extends TextInputProps {
@@ -160,7 +159,11 @@ const FloatingLabelInput = ({
       </View>
       {error && (
         <View style={inputStyles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={14} color={colors.errorText} />
+          <MaterialCommunityIcons
+            name="alert-circle"
+            size={14}
+            color={colors.errorText}
+          />
           <ThemedText
             style={[inputStyles.errorText, { color: colors.errorText }]}
           >
@@ -177,7 +180,6 @@ export default function SignupScreen() {
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
   const statusBarHeight = useStatusBarHeight();
-  const { handleSocialLogin, socialLoading } = useAuth();
   const { form: signupForm, handleSubmit, isLoading } = useSignupForm();
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -366,7 +368,9 @@ export default function SignupScreen() {
                 <View
                   style={[styles.divider, { backgroundColor: colors.divider }]}
                 />
-                <ThemedText style={styles.dividerText}>{t('auth.or')}</ThemedText>
+                <ThemedText style={styles.dividerText}>
+                  {t('auth.or')}
+                </ThemedText>
                 <View
                   style={[styles.divider, { backgroundColor: colors.divider }]}
                 />

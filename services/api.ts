@@ -1,9 +1,20 @@
 import axiosClient from '@/api/axiosClient';
 import { getBaseURL } from '@/constants/constants';
 import { User } from '@/types/types';
+import { AxiosRequestConfig } from 'axios';
+
+// Extend the AxiosRequestConfig interface for our custom properties
+interface CustomAxiosConfig extends AxiosRequestConfig {
+  skipErrorTooltip?: boolean;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+}
 
 export const AuthAPI = {
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string): Promise<AuthResponse> => {
     const response = await axiosClient.post('/auth/signin', {
       email,
       password,
@@ -16,7 +27,7 @@ export const AuthAPI = {
     password: string,
     firstName: string,
     lastName: string
-  ) => {
+  ): Promise<AuthResponse> => {
     const response = await axiosClient.post('/auth/signup', {
       email,
       password,
@@ -26,15 +37,18 @@ export const AuthAPI = {
     return response.data;
   },
 
-  logout: async () => {
-    const response = await axiosClient.post('/auth/logout');
-    return response.data;
+  logout: async (): Promise<void> => {
+    await axiosClient.post('/auth/logout');
   },
 
-  refreshToken: async (refreshToken: string) => {
-    const response = await axiosClient.get('/auth/refresh', {
-      headers: { Authorization: `Bearer ${refreshToken}` },
-    });
+  refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
+    // Use a direct axios call to avoid the interceptors
+    const config: CustomAxiosConfig = {
+      headers: { 'Content-Type': 'application/json' },
+      skipErrorTooltip: true
+    };
+    
+    const response = await axiosClient.post('/auth/refresh', { refreshToken }, config);
     return response.data;
   },
 
@@ -48,12 +62,11 @@ export const UserAPI = {
     return response.data;
   },
 
-  verifyEmail: async () => {
-    const response = await axiosClient.post('/users/me/verify-email');
-    return response.data;
+  verifyEmail: async (): Promise<void> => {
+    await axiosClient.post('/users/me/verify-email');
   },
 
-  updateProfile: async (data: Partial<User>) => {
+  updateProfile: async (data: Partial<User>): Promise<User> => {
     const response = await axiosClient.patch('/users/me', data);
     return response.data;
   },

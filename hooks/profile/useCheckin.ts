@@ -15,19 +15,22 @@ export type Subscription = {
   updatedAt: string;
 };
 const fetchCheckIn = async (): Promise<Subscription[]> => {
-  const response = await axiosClient.get('/content/classes/discover/me/checkins', {
-    params: {
+  const response = await axiosClient.get(
+    '/content/classes/discover/me/checkins',
+    {
+      params: {
         offset: 0,
-        limit: 50
+        limit: 50,
+      },
     }
-  });
+  );
   if (!response.data) {
     throw new Error('No subscription data received');
   }
   return response?.data?.response;
 };
 
-export function useCheckin() {
+export function useProfileCheckin() {
   const {
     data: checkIn = [],
     isLoading,
@@ -45,4 +48,4 @@ export function useCheckin() {
   };
 }
 
-export default useCheckin;
+export default useProfileCheckin;

@@ -1,46 +1,70 @@
+import { axiosClient } from '@/api';
 import { QueryKeys } from '@/constants/QueryKeys';
-import { useClassBook } from '@/hooks/classes/useClassBook';
 import { ClassDetailResponse } from '@/hooks/classes/useClassDetails';
 import { queryClient } from '@/lib/queryClient';
 import { Ionicons } from '@expo/vector-icons';
+import { useMutation } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { BookingSuccessView } from './BookingSuccessView';
+import { BookingCancelledView } from './BookingCancelledView';
 import { ConfirmationBottomSheet } from './ConfirmationBottomSheet';
 
-interface BookingConfirmationPanelProps {
+const useClassCancel = () => {
+  const cancelClass = async (params: { classId: string }): Promise<any> => {
+    try {
+      const response = await axiosClient.delete(
+        `/activity/schedules/me/${params.classId}`
+      );
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.schedulesDataQuerykey],
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error cancelling class:', error);
+      throw error;
+    }
+  };
+
+  const cancelMutationFn = useMutation({
+    mutationFn: cancelClass,
+  });
+
+  return {
+    cancelMutationFn,
+    isLoading: cancelMutationFn.isPending,
+    error: cancelMutationFn.error,
+    isSuccess: cancelMutationFn.isSuccess,
+  };
+};
+
+interface CancellationConfirmationPanelProps {
   visible: boolean;
   onClose: () => void;
   classData: ClassDetailResponse;
   classDetail: any;
+  onCancellationSuccess?: () => void;
   colors: Record<string, string>;
-  onBookingSuccess?: () => void;
 }
 
-export const BookingConfirmationPanel: React.FC<
-  BookingConfirmationPanelProps
+export const CancellationConfirmationPanel: React.FC<
+  CancellationConfirmationPanelProps
 > = ({
   visible,
   onClose,
   classData,
   classDetail,
+  onCancellationSuccess,
   colors,
-  onBookingSuccess,
 }) => {
   const { t } = useTranslation();
-  const { bookMutationFn, isLoading } = useClassBook();
+  const { cancelMutationFn, isLoading } = useClassCancel();
   const [showSuccessView, setShowSuccessView] = useState(false);
 
-  const handleConfirmBooking = async () => {
+  const handleConfirmCancellation = async () => {
     try {
-      await bookMutationFn.mutateAsync({
+      await cancelMutationFn.mutateAsync({
         classId: classData.id,
-        startDate: classData.date,
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: [QueryKeys.schedulesDataQuerykey],
       });
 
       queryClient.invalidateQueries({
@@ -48,16 +72,16 @@ export const BookingConfirmationPanel: React.FC<
       });
 
       setShowSuccessView(true);
-      if (onBookingSuccess) {
-        onBookingSuccess();
-      }
     } catch (error) {
-      console.error('Error booking class:', error);
+      console.error('Error cancelling class:', error);
     }
   };
 
   const handleCloseSuccess = () => {
     setShowSuccessView(false);
+    if (onCancellationSuccess) {
+      onCancellationSuccess();
+    }
     onClose();
   };
 
@@ -79,7 +103,7 @@ export const BookingConfirmationPanel: React.FC<
                 <Ionicons name="close" size={24} color="#999" />
               </TouchableOpacity>
             </View>
-            <BookingSuccessView
+            <BookingCancelledView
               colors={{
                 background: colors.background || '#1A1A1A',
                 textPrimary: colors.textPrimary || '#FFFFFF',
@@ -97,16 +121,16 @@ export const BookingConfirmationPanel: React.FC<
     <ConfirmationBottomSheet
       visible={visible}
       onClose={onClose}
-      onConfirm={handleConfirmBooking}
-      title={t('classes.confirmBooking', 'Confirm Booking')}
+      onConfirm={handleConfirmCancellation}
+      title={t('classes.cancelBooking', 'Cancel Booking')}
       message={t(
-        'classes.bookingConfirmationMessage',
-        'Please confirm that you want to book this class. You will be able to cancel it later if needed.'
+        'classes.cancellationFeeWarning',
+        'Please cancel at least 12 hours prior to the class to avoid late cancellation or no-show fees.'
       )}
-      confirmText={t('classes.bookClass', 'Book Class')}
-      cancelText={t('common.cancel', 'Cancel')}
+      confirmText={t('classes.cancelBooking', 'Cancel Booking')}
+      cancelText={t('common.goBack', 'Go Back')}
       isLoading={isLoading}
-      isDestructive={false}
+      isDestructive={true}
       classData={classData}
     />
   );

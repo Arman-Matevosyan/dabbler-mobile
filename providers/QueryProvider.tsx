@@ -1,4 +1,4 @@
-import { queryClient } from '@/lib/queryClient';
+import { queryClient } from '@/services/query/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React, { ReactNode, Suspense } from 'react';
 import { ActivityIndicator, View } from 'react-native';

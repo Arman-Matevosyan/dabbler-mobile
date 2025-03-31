@@ -69,6 +69,24 @@ const serializeParams = (params: SearchParams) => {
 
 const fetchVenues = async (params: SearchParams): Promise<VenueResponse> => {
   try {
+    // Prepare categories parameter in the correct format for the API
+    // Different APIs may expect categories in different formats
+    let categoryParam;
+    
+    if (params.category && Array.isArray(params.category) && params.category.length > 0) {
+      // Some APIs expect a comma-separated string
+      const categoryString = params.category.join(',');
+      
+      // Choose the format that works with your API:
+      // 1. As an array of strings - most RESTful APIs
+      categoryParam = params.category;
+      
+      // 2. As a comma-separated string - some older APIs
+      // categoryParam = categoryString;
+      
+      console.log("Sending categories:", categoryParam);
+    }
+      
     const response = await axiosClient.get(
       '/content/venues/discover/map/search',
       {
@@ -79,7 +97,7 @@ const fetchVenues = async (params: SearchParams): Promise<VenueResponse> => {
           distance: params.radius,
           limit: params.limit || 100,
           offset: params.offset || 0,
-          category: params.category?.join(',') || [],
+          category: categoryParam, // Send category in the determined format
         },
       }
     );
@@ -95,15 +113,15 @@ export const useVenueSearch = (params: SearchParams, isFocused: boolean) => {
   // Create a stable serialized query key
   const serializedParams = useMemo(() => serializeParams(params), [params]);
   
-  // Only enable query if location is valid and tab is focused
-  const enabled = Boolean(
-    isFocused && params.locationLat && params.locationLng && params.radius
+  // Only enable query when tab is focused and we have location parameters
+  const hasLocationParams = Boolean(
+    params.locationLat && params.locationLng && params.radius
   );
 
   return useQuery({
     queryKey: [QueryKeys.venuesSearchQueryKey, serializedParams],
     queryFn: () => fetchVenues(params),
-    enabled,
+    enabled: isFocused && hasLocationParams, // Only run when focused and we have location params
     retry: 0,
     select: (data: VenueResponse) => {
       const clusters = data.clusters || [];

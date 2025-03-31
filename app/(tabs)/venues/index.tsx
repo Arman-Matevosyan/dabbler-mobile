@@ -5,9 +5,9 @@ import { VenueBottomSheet } from '@/components/venues/VenueBottomSheet';
 import useFetchUserLocation from '@/hooks/useFetchUserLocation';
 import { useVenueSearch } from '@/hooks/venues/useVenueSearch';
 import {
-  useLocationParams,
-  useSearchStore,
-  useVenueSearchFilters,
+    useLocationParams,
+    useSearchStore,
+    useVenueSearchFilters,
 } from '@/store/useSearchStore';
 import { useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,12 +16,21 @@ import { StyleSheet, View } from 'react-native';
 import { Region } from 'react-native-maps';
 import { useShallow } from 'zustand/react/shallow';
 
+const ARMENIA_REGION = {
+  latitude: 40.179,
+  longitude: 44.499,
+  latitudeDelta: 1.5,
+  longitudeDelta: 1.5,
+  radius: 100000,
+};
+
 export default function VenueTabScreen() {
   const { t } = useTranslation();
   const { userLocation, fetchUserLocation } = useFetchUserLocation();
   const isFocused = useIsFocused();
   const lastUpdate = useRef<number>(0);
   const regionChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialized = useRef<boolean>(false);
 
   const [pendingRegion, setPendingRegion] = useState<{
     region: Region;
@@ -56,7 +65,25 @@ export default function VenueTabScreen() {
     ]
   );
 
-  const { data, isLoading } = useVenueSearch(searchParams, isFocused);
+  useEffect(() => {
+    if (!initialized.current && isFocused) {
+      initialized.current = true;
+      updateLocation({
+        locationLat: ARMENIA_REGION.latitude,
+        locationLng: ARMENIA_REGION.longitude,
+        radius: ARMENIA_REGION.radius,
+      });
+      fetchUserLocation();
+    }
+  }, [isFocused, updateLocation, fetchUserLocation]);
+
+  const { data, isLoading, refetch } = useVenueSearch(searchParams, isFocused);
+
+  const handleMapReady = useCallback(() => {
+    if (locationLat && locationLng && radius) {
+      refetch();
+    }
+  }, [locationLat, locationLng, radius, refetch]);
 
   useEffect(() => {
     return () => {
@@ -169,9 +196,15 @@ export default function VenueTabScreen() {
         onRegionChange={handleRegionChange}
         venues={venues}
         clusters={clusters}
-        initialRegion={userLocation}
+        initialRegion={{
+          latitude: locationLat || ARMENIA_REGION.latitude,
+          longitude: locationLng || ARMENIA_REGION.longitude,
+          latitudeDelta: ARMENIA_REGION.latitudeDelta,
+          longitudeDelta: ARMENIA_REGION.longitudeDelta,
+        }}
         showUserLocation
         userLocation={userLocation}
+        onMapReady={handleMapReady}
       />
 
       <VenueBottomSheet

@@ -49,6 +49,16 @@ const serializeParams = (params: SearchParams) => {
 
 const fetchClasses = async (params: SearchParams): Promise<ClassResponse> => {
   try {
+    let categoryParam;
+    
+    if (params.category && Array.isArray(params.category) && params.category.length > 0) {
+      const categoryString = params.category.join(',');
+      
+      categoryParam = params.category;
+      
+      console.log("Sending classes categories:", categoryParam);
+    }
+      
     const apiParams = {
       q: params.query || '',
       latitude: params.locationLat,
@@ -58,7 +68,7 @@ const fetchClasses = async (params: SearchParams): Promise<ClassResponse> => {
       offset: params.offset || 0,
       from_date: params.from_date?.toISOString(),
       to_date: params.to_date?.toISOString(),
-      category: params.category || [],
+      category: categoryParam,
     };
 
     const response = await axiosClient.get('/content/classes/discover/search', {

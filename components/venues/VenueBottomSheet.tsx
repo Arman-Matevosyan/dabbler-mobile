@@ -137,14 +137,14 @@ const FavoriteButton = React.memo(({ venue }: FavoriteButtonProps) => {
     <TouchableOpacity
       style={[
         styles.favoriteButton,
-        { backgroundColor: colors.background + '80' },
       ]}
       onPress={handlePress}
+      activeOpacity={0.6}
     >
       <Ionicons
         name={isFavorite ? 'heart' : 'heart-outline'}
         size={24}
-        color={isFavorite ? '#FF4136' : colors.textPrimary}
+        color={isFavorite ? '#FF3B30' : 'white'}
       />
     </TouchableOpacity>
   );
@@ -534,12 +534,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 2,
   },
   header: {
     borderBottomWidth: 1,

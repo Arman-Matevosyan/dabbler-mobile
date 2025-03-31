@@ -1,12 +1,13 @@
 import { getBaseURL } from '@/constants/constants';
 import { showErrorTooltip } from '@/hooks/tooltip';
+import { invalidateAuthDependentQueries } from '@/services/query/queryClient';
+import { useAuthStore } from '@/store/authStore';
 import axios, {
     AxiosError,
     AxiosInstance,
     AxiosResponse,
     InternalAxiosRequestConfig,
 } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -48,21 +49,30 @@ const axiosClient: AxiosInstance = axios.create({
         if (Array.isArray(value) && value.length === 0) {
           parts.push(`${encodeURIComponent(key)}=[]`);
         } else if (Array.isArray(value)) {
-          parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(JSON.stringify(value))}`);
+          parts.push(
+            `${encodeURIComponent(key)}=${encodeURIComponent(
+              JSON.stringify(value)
+            )}`
+          );
         } else if (value !== undefined && value !== null) {
           parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
         }
       }
       return parts.join('&');
-    }
-  }
+    },
+  },
 });
 
 axiosClient.interceptors.request.use(
   async (config: CustomAxiosRequestConfig) => {
-    if (config.headers?.['x-refresh']) return config;
+    if (
+      config.url?.includes('/auth/refresh') ||
+      config.headers?.['x-refresh']
+    ) {
+      return config;
+    }
 
-    const accessToken = await SecureStore.getItemAsync('accessToken');
+    const accessToken = await useAuthStore.getState().getAccessToken();
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -78,17 +88,23 @@ axiosClient.interceptors.response.use(
 
     if (!error.response) {
       console.error('Network error detected:', error.message);
-      
-      if (error.code === 'ECONNABORTED' && originalRequest && !originalRequest._retry) {
+
+      if (
+        error.code === 'ECONNABORTED' &&
+        originalRequest &&
+        !originalRequest._retry
+      ) {
         console.log('Request timed out, retrying with longer timeout');
         originalRequest._retry = true;
         originalRequest.timeout = 45000;
         return axiosClient(originalRequest);
       }
-      
+
       if (!originalRequest?.skipErrorTooltip) {
         showErrorTooltip(
-          new Error(`Network error - Please check your connection (${error.message})`)
+          new Error(
+            `Network error - Please check your connection (${error.message})`
+          )
         );
       }
       return Promise.reject(error);
@@ -105,35 +121,40 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const refreshToken = await useAuthStore.getState().getRefreshToken();
         if (!refreshToken) throw new Error('No refresh token available');
 
-        const { data } = await axiosClient.get('/auth/refresh', {
-          headers: {
-            Authorization: `Bearer ${refreshToken}`,
-            'x-refresh': '1',
-          },
-        });
+        const { data } = await axios.post(
+          `${getBaseURL()}/auth/refresh`,
+          { refreshToken },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
         if (!data?.accessToken) throw new Error('Invalid token response');
 
-        await SecureStore.setItemAsync('accessToken', data.accessToken);
-        if (data.refreshToken) {
-          await SecureStore.setItemAsync('refreshToken', data.refreshToken);
-        }
+        await useAuthStore
+          .getState()
+          .setTokens(data.accessToken, data.refreshToken || undefined);
 
         axiosClient.defaults.headers.common[
           'Authorization'
         ] = `Bearer ${data.accessToken}`;
+        invalidateAuthDependentQueries();
         processQueue(null, data.accessToken);
 
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosClient(originalRequest);
       } catch (refreshError) {
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('refreshToken');
+        await useAuthStore.getState().logout();
         processQueue(refreshError as Error, null);
 
-        showErrorTooltip(new Error('Session expired - Please login again'));
+        if (!originalRequest?.skipErrorTooltip) {
+          showErrorTooltip(new Error('Session expired - Please login again'));
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

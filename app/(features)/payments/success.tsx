@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { usePaymentSubsccribe, useVerifyPayment } from '@/hooks/payments';
+import { usePaymentSubscribe, useVerifyPayment } from '@/hooks/payments';
 import { useTheme } from '@/providers/ThemeContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -48,13 +48,18 @@ export default function SuccessScreen() {
   });
 
   const {
-    data,
-    isLoading: isSubscribeLoading,
-    isSuccess,
-  } = usePaymentSubsccribe({ paymentMethodId: paymentData?.id, planId: plan });
+    mutate: subscribeToPlan,
+    isPending: isSubscribeLoading,
+    isSuccess: isSubscribeSuccess,
+  } = usePaymentSubscribe();
+  useEffect(() => {
+    if (isVerifyPaymentSuccess && paymentData?.id && plan) {
+      subscribeToPlan({ paymentMethodId: paymentData.id, planId: plan });
+    }
+  }, [isVerifyPaymentSuccess, paymentData, plan]);
 
   useEffect(() => {
-    if (isSuccess && isVerifyPaymentSuccess) {
+    if (isSubscribeSuccess && isVerifyPaymentSuccess) {
       Animated.sequence([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -83,7 +88,6 @@ export default function SuccessScreen() {
               easing: Easing.out(Easing.quad),
             }),
           ]),
-          // Finally show the button
           Animated.timing(buttonFadeAnim, {
             toValue: 1,
             duration: 400,
@@ -93,10 +97,10 @@ export default function SuccessScreen() {
         ]),
       ]).start();
     }
-  }, [isSuccess, isVerifyPaymentSuccess]);
+  }, [isSubscribeSuccess, isVerifyPaymentSuccess]);
 
   const goToHome = () => {
-    router.replace('/(tabs)' as any);
+    router.replace('/(tabs)/profile');
   };
 
   const renderLoadingState = () => (
@@ -189,7 +193,7 @@ export default function SuccessScreen() {
     </SafeAreaView>
   );
 
-  if (isLoading || isSubscribeLoading) {
+  if (!isVerifyPaymentSuccess || !isSubscribeSuccess) {
     return renderLoadingState();
   }
 
@@ -204,7 +208,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 20, // Add padding to ensure content isn't cut off
+    paddingTop: 20,
   },
   contentContainer: {
     width: '85%',

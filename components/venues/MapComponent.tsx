@@ -56,6 +56,7 @@ const MapComponent: React.FC<MapComponentProps> = memo(
     clusters = [],
     initialRegion,
     showUserLocation = true,
+    onMapReady,
   }) => {
     const { colorScheme } = useTheme();
     const mapRef = useRef<MapView>(null);
@@ -97,6 +98,14 @@ const MapComponent: React.FC<MapComponentProps> = memo(
       });
     }, []);
 
+    // Handle map ready event
+    const handleMapReady = useCallback(() => {
+      // Call the onMapReady prop if provided
+      if (onMapReady) {
+        onMapReady();
+      }
+    }, [onMapReady]);
+
     // Use stable IDs for venue keys
     const getVenueKey = useCallback(
       (venue: Venue) => `venue-${venue.id}`,
@@ -115,7 +124,7 @@ const MapComponent: React.FC<MapComponentProps> = memo(
           useNativeDriver: true,
         }),
       ]).start();
-    }, [selectedVenue]);
+    }, [selectedVenue, slideAnim, opacityAnim]);
 
     // Use stable IDs for cluster keys
     const getClusterKey = useCallback(
@@ -243,6 +252,7 @@ const MapComponent: React.FC<MapComponentProps> = memo(
           onPress={() => setSelectedVenue(null)}
           showsUserLocation={showUserLocation}
           moveOnMarkerPress={false}
+          onMapReady={handleMapReady}
         >
           {validClusters.map((cluster) => (
             <ClusterMarker
@@ -290,11 +300,11 @@ const calculateRadius = (region: Region) => {
 
 const styles = StyleSheet.create({
   container: {
+    ...StyleSheet.absoluteFillObject,
     flex: 1,
-    backgroundColor: 'transparent',
   },
   map: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
 });
 

@@ -1,6 +1,6 @@
 import { axiosClient } from '@/api';
 import { QueryKeys } from '@/constants/QueryKeys';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const subscribeToPlan = async (subData) => {
   try {
@@ -12,23 +12,49 @@ const subscribeToPlan = async (subData) => {
   }
 };
 
-function usePaymentSubsccribe(subData) {
-  const { data, isLoading, isSuccess } = useQuery({
-    queryKey: [QueryKeys.paymentCreateSubQueryKey, subData],
-    queryFn: () => subscribeToPlan(subData),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    enabled: !!subData?.paymentMethodId && !!subData?.planId,
+function usePaymentSubscribe() {
+  const queryClient = useQueryClient();
+
+  const {
+    mutate,
+    data,
+    isPending,
+    isSuccess,
+    error,
+    reset,
+    mutateAsync,
+    status,
+  } = useMutation({
+    mutationFn: subscribeToPlan,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.paymentCreateSubQueryKey],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.subscriptionsQueryKey],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.plansQueryKey],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.paymentMethodsQueryKey],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QueryKeys.userQueryKey],
+      });
+    },
   });
 
   return {
+    mutate,
+    mutateAsync,
     data,
-    isLoading,
-    error: null,
+    isPending,
     isSuccess,
-    retry: null,
-    refetch: () => {},
+    error,
+    reset,
+    status,
   };
 }
 
-export default usePaymentSubsccribe;
+export default usePaymentSubscribe;

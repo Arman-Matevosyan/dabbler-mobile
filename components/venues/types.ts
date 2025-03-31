@@ -49,4 +49,5 @@ export interface MapComponentProps {
     latitude: number;
     longitude: number;
   };
+  onMapReady?: () => void;
 } 

@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -45,9 +45,29 @@ export const SearchWithCategories = ({
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  
+  // Use ref instead of state to track searching status
+  const isSearching = useRef(false);
+
+  const handleSearchChange = (text: string) => {
+    isSearching.current = true;
+    onSearchChange(text);
+    
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      isSearching.current = false;
+    }, 500);
+  };
 
   const handleConfirmCategories = (confirmedCategories: string[]) => {
     onCategoryToggle(confirmedCategories);
+  };
+
+  const handleDismiss = () => {
+    // Only close the modal if we're not in the middle of a search operation
+    if (!isSearching.current) {
+      setIsModalVisible(false);
+    }
   };
 
   const backgroundStyle = {
@@ -77,9 +97,15 @@ export const SearchWithCategories = ({
             placeholder={placeholder}
             placeholderTextColor={colors.textSecondary}
             value={searchValue}
-            onChangeText={onSearchChange}
+            onChangeText={handleSearchChange}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={() => {
+              setIsFocused(false);
+              // Ensure search state is reset when input loses focus
+              setTimeout(() => {
+                isSearching.current = false;
+              }, 300);
+            }}
             autoCorrect={false}
             autoCapitalize="none"
           />
@@ -122,7 +148,7 @@ export const SearchWithCategories = ({
 
       <CategoryList
         isVisible={isModalVisible}
-        onDismiss={() => setIsModalVisible(false)}
+        onDismiss={handleDismiss}
         selectedCategories={selectedCategories}
         onConfirm={handleConfirmCategories}
       />

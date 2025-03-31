@@ -7,11 +7,9 @@ import AuthProvider, { useAuth } from '@/providers/AuthProvider';
 import NetworkProvider from '@/providers/NetworkProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import {
-  ThemeProvider as CustomThemeProvider,
-  useTheme,
+    ThemeProvider as CustomThemeProvider,
+    useTheme,
 } from '@/providers/ThemeContext';
-import { processSocialAuthDeepLink } from '@/services/auth/socialAuth';
-import { initializeAuth } from '@/store/authStore';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useFonts } from 'expo-font';
 import * as Linking from 'expo-linking';
@@ -28,16 +26,23 @@ LogBox.ignoreAllLogs(true);
 setupGlobalErrorHandling();
 
 const linking = {
-  prefixes: [Linking.createURL('/')],
+  prefixes: [Linking.createURL('/'), 'dabbler://', 'https://dabbler.app'],
   config: {
     screens: {
       Profile: 'profile',
+      '(tabs)': {
+        screens: {
+          checkin: {
+            path: 'checkin',
+            parse: {
+              url: (url: string) => decodeURIComponent(url),
+            },
+          },
+        }
+      }
     },
   },
 };
-initializeAuth().catch((error) => {
-  console.error('Failed to initialize auth:', error);
-});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -77,23 +82,6 @@ function RootLayoutNav() {
       setIsReady(true);
     }
   }, [loaded]);
-
-  useEffect(() => {
-    const processUrl = async (url: string) => {
-      // Delegate to the specialized function for social auth deep links
-      await processSocialAuthDeepLink(url);
-    };
-
-    Linking.getInitialURL().then((url) => {
-      if (url) processUrl(url);
-    });
-
-    const subscription = Linking.addEventListener('url', (event) => {
-      processUrl(event.url);
-    });
-
-    return () => subscription.remove();
-  }, []);
 
   if (!loaded || !isReady) return null;
 

@@ -2,7 +2,6 @@ import ProfilePageSkeleton from '@/components/ui/MainTabsSkeletons/ProfilePageSk
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { ThemedText } from '@/components/ui/ThemedText';
 import useSubscriptions from '@/hooks/profile/useSubscriptions';
-import { useTheme } from '@/providers/ThemeContext';
 import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -20,7 +19,6 @@ import {
 export default function MembershipScreen() {
   const { styles, colors } = useProfileTabStyles();
   const { subscription, isLoading } = useSubscriptions();
-  const { colorScheme } = useTheme();
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -31,7 +29,6 @@ export default function MembershipScreen() {
     );
   }
 
-  // Check if subscription data exists and has valid plan
   const hasSubscriptionData =
     subscription &&
     subscription.plan &&
