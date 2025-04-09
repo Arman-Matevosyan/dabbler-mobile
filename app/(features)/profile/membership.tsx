@@ -1,8 +1,9 @@
 import ProfilePageSkeleton from '@/components/ui/MainTabsSkeletons/ProfilePageSkeleton';
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { ThemedText } from '@/components/ui/ThemedText';
-import useSubscriptions from '@/hooks/profile/useSubscriptions';
+import { useSubscriptions } from '@/hooks/payment/useSubscriptions';
 import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
+import { ISubscription } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { router } from 'expo-router';
@@ -18,8 +19,11 @@ import {
 
 export default function MembershipScreen() {
   const { styles, colors } = useProfileTabStyles();
-  const { subscription, isLoading } = useSubscriptions();
+  const { data: subscriptionData, isLoading } = useSubscriptions();
   const { t } = useTranslation();
+  
+  // Type assertion to help TypeScript recognize the subscription type
+  const subscription = subscriptionData as ISubscription | undefined;
 
   if (isLoading) {
     return (

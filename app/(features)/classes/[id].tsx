@@ -1,11 +1,11 @@
 import {
-    ClassCard,
-    DateSelector,
-    EmptyState,
-    SkeletonCard,
+  ClassCard,
+  DateSelector,
+  EmptyState,
+  SkeletonCard,
 } from '@/components/classes';
 import { Colors } from '@/constants/Colors';
-import { useVenueClasses } from '@/hooks/classes/useVenueClasses';
+import { useDiscoverVenueClasses } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { addDays } from 'date-fns';
@@ -13,12 +13,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Animated,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function VenueClassesPage() {
@@ -30,7 +30,7 @@ export default function VenueClassesPage() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateRange, setDateRange] = useState<Date[]>([]);
-  
+
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function VenueClassesPage() {
       useNativeDriver: true,
       tension: 120,
       friction: 10,
-      velocity: 6
+      velocity: 6,
     }).start();
   }, []);
 
@@ -55,7 +55,7 @@ export default function VenueClassesPage() {
 
   const translateY = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [600, 0]
+    outputRange: [600, 0],
   });
 
   useEffect(() => {
@@ -75,37 +75,38 @@ export default function VenueClassesPage() {
     generateDateRange();
   }, []);
 
-  const { freeClasses, scheduledClasses, isLoading, error } = useVenueClasses({
-    venueId,
-    fromDate: selectedDate,
-    toDate: addDays(selectedDate, 1),
+  const { data, isLoading, error } = useDiscoverVenueClasses(venueId, {
+    from_date: selectedDate.toISOString(),
+    to_date: addDays(selectedDate, 1).toISOString(),
   });
+  const freeClasses = data?.response?.freeClasses || [];
+  const scheduledClasses = data?.response?.scheduledClasses || [];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.content, 
-          { 
+          styles.content,
+          {
             backgroundColor: colors.background,
-            transform: [{ translateY }]
-          }
+            transform: [{ translateY }],
+          },
         ]}
       >
         <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={closeScreen}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={closeScreen}>
             <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          
+
           <View style={styles.headerTitleContainer}>
-            <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            <Text
+              style={[styles.headerTitle, { color: colors.textPrimary }]}
+              numberOfLines={1}
+            >
               {t('classes.availableClasses')}
             </Text>
           </View>
-          
+
           <View style={styles.shareButton} />
         </View>
 
@@ -115,7 +116,10 @@ export default function VenueClassesPage() {
           onDateSelect={setSelectedDate}
         />
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
           {isLoading ? (
             Array.from({ length: 3 }).map((_, index) => (
               <SkeletonCard key={index} />
@@ -123,9 +127,11 @@ export default function VenueClassesPage() {
           ) : error ? (
             <EmptyState
               title={t('classes.unableToLoadClasses')}
-              message={error instanceof Error ? error.message : t('common.error')}
+              message={
+                error instanceof Error ? error.message : t('common.error')
+              }
             />
-          ) : (!scheduledClasses?.length && !freeClasses.length) ? (
+          ) : !scheduledClasses?.length && !freeClasses.length ? (
             <EmptyState
               title={t('classes.noClassesAvailable')}
               message={t('classes.noClassesScheduled')}
@@ -134,15 +140,38 @@ export default function VenueClassesPage() {
             <>
               {freeClasses.map((classItem) => (
                 <ClassCard
-                  key={`${classItem.id}-${classItem.date}`}
-                  classItem={classItem}
-                  isFreeClass
+                  key={`${classItem.id}`}
+                  classItem={{
+                    id: classItem.id,
+                    name: classItem.name,
+                    covers: classItem.covers || [],
+                    date: classItem.date,
+                    duration: classItem.duration,
+                    venue: { name: classItem.venue?.name || '' },
+                    instructorInfo: classItem.instructorInfo || '',
+                    categories: classItem.categories || [],
+                    scheduled: false,
+                    scheduledSpots: classItem.scheduledSpots || 0,
+                    totalSpots: classItem.totalSpots || 0,
+                  }}
                 />
               ))}
               {scheduledClasses?.map((classItem) => (
                 <ClassCard
-                  key={`${classItem.id}-${classItem.date}`}
-                  classItem={classItem}
+                  key={`${classItem.id}`}
+                  classItem={{
+                    id: classItem.id,
+                    name: classItem.name,
+                    covers: classItem.covers || [],
+                    date: classItem.date,
+                    duration: classItem.duration,
+                    venue: { name: classItem.venue?.name || '' },
+                    instructorInfo: classItem.instructorInfo || '',
+                    categories: classItem.categories || [],
+                    scheduled: true,
+                    scheduledSpots: classItem.scheduledSpots || 0,
+                    totalSpots: classItem.totalSpots || 0,
+                  }}
                 />
               ))}
             </>

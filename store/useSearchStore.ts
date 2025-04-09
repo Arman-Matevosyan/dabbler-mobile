@@ -14,7 +14,6 @@ interface SharedSearchParams {
   category: string[];
 }
 
-// Separate search params for venues and classes
 interface VenueSearchParams extends SharedSearchParams {}
 interface ClassSearchParams extends SharedSearchParams {}
 
@@ -91,13 +90,13 @@ export const useSearchStore = create<SearchStore>((set) => ({
       // When updating shared params, also update venue and class params
       const newVenueParams = { ...state.venueSearchParams, ...updates };
       const newClassParams = { ...state.classSearchParams, ...updates };
-      
+
       return shallow(state.sharedSearchParams, newParams)
         ? state
-        : { 
+        : {
             sharedSearchParams: newParams,
             venueSearchParams: newVenueParams,
-            classSearchParams: newClassParams 
+            classSearchParams: newClassParams,
           };
     }),
   updateVenueSearchParams: (updates) =>
@@ -124,7 +123,6 @@ export const useSearchStore = create<SearchStore>((set) => ({
     })),
 }));
 
-// Custom hooks for search filters
 export const useSearchFilters = () => {
   const { query, category } = useSearchStore(
     useShallow((state: SearchStore) => ({
@@ -132,19 +130,19 @@ export const useSearchFilters = () => {
       category: state.sharedSearchParams.category,
     }))
   );
-  
+
   const updateSharedSearchParams = useSearchStore(
     (state: SearchStore) => state.updateSharedSearchParams
   );
-  
+
   const setQuery = (newQuery: string) => {
     updateSharedSearchParams({ query: newQuery });
   };
-  
+
   const setCategory = (newCategory: string[]) => {
     updateSharedSearchParams({ category: newCategory });
   };
-  
+
   return { query, category, setQuery, setCategory };
 };
 
@@ -155,19 +153,19 @@ export const useVenueSearchFilters = () => {
       category: state.venueSearchParams.category,
     }))
   );
-  
+
   const updateVenueSearchParams = useSearchStore(
     (state: SearchStore) => state.updateVenueSearchParams
   );
-  
+
   const setQuery = (newQuery: string) => {
     updateVenueSearchParams({ query: newQuery });
   };
-  
+
   const setCategory = (newCategory: string[]) => {
     updateVenueSearchParams({ category: newCategory });
   };
-  
+
   return { query, category, setQuery, setCategory };
 };
 
@@ -178,19 +176,19 @@ export const useClassSearchFilters = () => {
       category: state.classSearchParams.category,
     }))
   );
-  
+
   const updateClassSearchParams = useSearchStore(
     (state: SearchStore) => state.updateClassSearchParams
   );
-  
+
   const setQuery = (newQuery: string) => {
     updateClassSearchParams({ query: newQuery });
   };
-  
+
   const setCategory = (newCategory: string[]) => {
     updateClassSearchParams({ category: newCategory });
   };
-  
+
   return { query, category, setQuery, setCategory };
 };
 
@@ -202,15 +200,15 @@ export const useLocationParams = () => {
       radius: state.sharedLocation.radius,
     }))
   );
-  
+
   const updateSharedLocation = useSearchStore(
     (state: SearchStore) => state.updateSharedLocation
   );
-  
-  return { 
-    locationLat, 
-    locationLng, 
-    radius, 
-    updateLocation: updateSharedLocation 
+
+  return {
+    locationLat,
+    locationLng,
+    radius,
+    updateLocation: updateSharedLocation,
   };
 };

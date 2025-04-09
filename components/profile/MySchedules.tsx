@@ -127,13 +127,16 @@ export const MySchedules = () => {
 
   const openGoogleMaps = (schedule: ScheduleItem) => {
     // Check if location coordinates are available
-    if (schedule.location?.coordinates && schedule.location.coordinates.length === 2) {
+    if (
+      schedule.location?.coordinates &&
+      schedule.location.coordinates.length === 2
+    ) {
       const [longitude, latitude] = schedule.location.coordinates;
       const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
       Linking.openURL(url).catch((err) =>
         console.error('Error opening Google Maps:', err)
       );
-    } 
+    }
     // If no coordinates but venue name is available, search by venue name
     else if (schedule.venue?.name) {
       const venueQuery = encodeURIComponent(schedule.venue.name);

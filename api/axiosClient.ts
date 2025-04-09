@@ -1,12 +1,12 @@
 import { getBaseURL } from '@/constants/constants';
 import { showErrorTooltip } from '@/hooks/tooltip';
 import { invalidateAuthDependentQueries } from '@/services/query/queryClient';
-import { useAuthStore } from '@/store/authStore';
+import * as authUtils from '@/utils/authUtils';
 import axios, {
-    AxiosError,
-    AxiosInstance,
-    AxiosResponse,
-    InternalAxiosRequestConfig,
+  AxiosError,
+  AxiosInstance,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
 } from 'axios';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -72,7 +72,7 @@ axiosClient.interceptors.request.use(
       return config;
     }
 
-    const accessToken = await useAuthStore.getState().getAccessToken();
+    const accessToken = await authUtils.getAccessToken();
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -94,7 +94,6 @@ axiosClient.interceptors.response.use(
         originalRequest &&
         !originalRequest._retry
       ) {
-        console.log('Request timed out, retrying with longer timeout');
         originalRequest._retry = true;
         originalRequest.timeout = 45000;
         return axiosClient(originalRequest);
@@ -121,24 +120,19 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await useAuthStore.getState().getRefreshToken();
+        const refreshToken = await authUtils.getRefreshToken();
         if (!refreshToken) throw new Error('No refresh token available');
 
-        const { data } = await axios.post(
-          `${getBaseURL()}/auth/refresh`,
-          { refreshToken },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        const { data } = await axios.get(`${getBaseURL()}/auth/refresh`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${refreshToken}`,
+          },
+        });
 
         if (!data?.accessToken) throw new Error('Invalid token response');
 
-        await useAuthStore
-          .getState()
-          .setTokens(data.accessToken, data.refreshToken || undefined);
+        await authUtils.setTokens(data.accessToken, data.refreshToken);
 
         axiosClient.defaults.headers.common[
           'Authorization'
@@ -149,7 +143,7 @@ axiosClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosClient(originalRequest);
       } catch (refreshError) {
-        await useAuthStore.getState().logout();
+        await authUtils.clearTokens();
         processQueue(refreshError as Error, null);
 
         if (!originalRequest?.skipErrorTooltip) {

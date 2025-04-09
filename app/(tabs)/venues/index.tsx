@@ -2,12 +2,12 @@ import { SearchWithCategories } from '@/components/shared';
 import MapComponent from '@/components/venues/MapComponent';
 import { Cluster, Venue } from '@/components/venues/types';
 import { VenueBottomSheet } from '@/components/venues/VenueBottomSheet';
+import { useVenueSearch } from '@/hooks/content';
 import useFetchUserLocation from '@/hooks/useFetchUserLocation';
-import { useVenueSearch } from '@/hooks/venues/useVenueSearch';
 import {
-    useLocationParams,
-    useSearchStore,
-    useVenueSearchFilters,
+  useLocationParams,
+  useSearchStore,
+  useVenueSearchFilters,
 } from '@/store/useSearchStore';
 import { useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

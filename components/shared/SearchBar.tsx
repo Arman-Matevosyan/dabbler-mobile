@@ -5,11 +5,11 @@ import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface SearchBarProps {
@@ -77,7 +77,8 @@ export const SearchBar = ({
 };
 
 const getContainerStyles = (colorScheme: string, colors: any) => ({
-  backgroundColor: colorScheme === 'dark' ? colors.secondary : colors.inputBackground,
+  backgroundColor:
+    colorScheme === 'dark' ? colors.secondary : colors.inputBackground,
   borderColor: colorScheme === 'dark' ? 'transparent' : `${colors.border}40`,
 });
 

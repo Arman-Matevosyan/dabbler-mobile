@@ -19,10 +19,8 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(1)).current;
 
-    // Animate when marker selection state changes
     useEffect(() => {
       if (isSelected) {
-        // Create a pop effect when selected
         Animated.sequence([
           Animated.timing(scaleAnim, {
             toValue: 1.2,
@@ -36,7 +34,6 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
           }),
         ]).start();
       } else {
-        // Animate back to normal size when deselected
         Animated.spring(scaleAnim, {
           toValue: 1,
           friction: 5,
@@ -45,9 +42,7 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
       }
     }, [isSelected, scaleAnim]);
 
-    // Animate marker when first appearing
     useEffect(() => {
-      // Start from invisible and scale up when marker first appears
       scaleAnim.setValue(0.5);
       opacityAnim.setValue(0);
 
@@ -65,30 +60,27 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
       ]).start();
     }, []);
 
-    // Determine the marker color based on venue type and selection state
     const getVenueTypeColor = (venue: Venue) => {
       // This function would determine the venue type more accurately
       // in a real implementation. For now, we'll use a simple approach.
       // In a real app, the venue would have a type property.
       const type = venue.name.toLowerCase();
-      
+
       if (type.includes('gym')) return VENUE_COLORS.GYM;
       if (type.includes('pool')) return VENUE_COLORS.POOL;
-      if (type.includes('restaurant') || type.includes('cafe')) return VENUE_COLORS.RESTAURANT;
-      if (type.includes('store') || type.includes('shop')) return VENUE_COLORS.STORE;
-      
+      if (type.includes('restaurant') || type.includes('cafe'))
+        return VENUE_COLORS.RESTAURANT;
+      if (type.includes('store') || type.includes('shop'))
+        return VENUE_COLORS.STORE;
+
       return VENUE_COLORS.DEFAULT;
     };
 
     const markerColor = useMemo(
-      () =>
-        isSelected
-          ? colors.activePinColor
-          : getVenueTypeColor(venue),
+      () => (isSelected ? colors.activePinColor : getVenueTypeColor(venue)),
       [isSelected, venue, colors.activePinColor]
     );
 
-    // Ensure we have valid coordinates before rendering
     const hasValidCoordinates = useMemo(
       () =>
         Array.isArray(venue.location?.coordinates) &&
@@ -103,9 +95,7 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
       return null;
     }
 
-    // Handle immediate feedback on press
     const handlePress = () => {
-      // Quick animation feedback before calling the onPress handler
       Animated.sequence([
         Animated.timing(scaleAnim, {
           toValue: 1.3,
@@ -125,7 +115,6 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
     return (
       <Marker
         coordinate={{
-          // Coordinates format is [longitude, latitude]
           latitude: venue.location.coordinates[1],
           longitude: venue.location.coordinates[0],
         }}
@@ -145,11 +134,11 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
             color={markerColor}
             style={[
               styles.icon,
-              { 
+              {
                 shadowColor: MARKER_COLORS.MARKER_STROKE,
                 textShadowColor: MARKER_COLORS.MARKER_STROKE,
-                textShadowRadius: 2
-              }
+                textShadowRadius: 2,
+              },
             ]}
           />
         </Animated.View>

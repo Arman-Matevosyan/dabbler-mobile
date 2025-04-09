@@ -4,17 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    PanResponder,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  PanResponder,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface ImageType {
@@ -51,13 +51,16 @@ const GenericImageCarousel = ({
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
 
-  const handleScroll = useCallback((event: any) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const index = Math.floor(event.nativeEvent.contentOffset.x / slideSize);
-    if (index >= 0 && index < images.length) {
-      setActiveIndex(index);
-    }
-  }, [images.length]);
+  const handleScroll = useCallback(
+    (event: any) => {
+      const slideSize = event.nativeEvent.layoutMeasurement.width;
+      const index = Math.floor(event.nativeEvent.contentOffset.x / slideSize);
+      if (index >= 0 && index < images.length) {
+        setActiveIndex(index);
+      }
+    },
+    [images.length]
+  );
 
   const handleImagePress = useCallback(() => {
     setZoomedImageVisible(true);
@@ -70,41 +73,46 @@ const GenericImageCarousel = ({
   }, [onFavoritePress]);
 
   // Navigation function with proper index handling and infinite scrolling
-  const navigateImage = useCallback((direction: 'next' | 'prev', isZoomed: boolean = false) => {
-    if (images.length <= 1) return;
-    
-    let newIndex;
-    if (direction === 'next') {
-      newIndex = activeIndex >= images.length - 1 ? 0 : activeIndex + 1;
-    } else {
-      newIndex = activeIndex <= 0 ? images.length - 1 : activeIndex - 1;
-    }
-    
-    setActiveIndex(newIndex);
-    
-    const listRef = isZoomed ? zoomedFlatListRef : flatListRef;
-    
-    if (listRef.current) {
-      setTimeout(() => {
-        try {
-          listRef.current?.scrollToOffset({
-            offset: newIndex * width,
-            animated: false,
-          });
-        } catch (error) {
-          // Silent fail
-        }
-      }, 10);
-    }
-  }, [activeIndex, images.length, width]);
+  const navigateImage = useCallback(
+    (direction: 'next' | 'prev', isZoomed: boolean = false) => {
+      if (images.length <= 1) return;
+
+      let newIndex;
+      if (direction === 'next') {
+        newIndex = activeIndex >= images.length - 1 ? 0 : activeIndex + 1;
+      } else {
+        newIndex = activeIndex <= 0 ? images.length - 1 : activeIndex - 1;
+      }
+
+      setActiveIndex(newIndex);
+
+      const listRef = isZoomed ? zoomedFlatListRef : flatListRef;
+
+      if (listRef.current) {
+        setTimeout(() => {
+          try {
+            listRef.current?.scrollToOffset({
+              offset: newIndex * width,
+              animated: false,
+            });
+          } catch (error) {
+            // Silent fail
+          }
+        }, 10);
+      }
+    },
+    [activeIndex, images.length, width]
+  );
 
   // Main carousel pan responder with improved handling
   const mainPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && 
-               Math.abs(gestureState.dx) > 10;
+        return (
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+          Math.abs(gestureState.dx) > 10
+        );
       },
       onPanResponderGrant: () => {
         flatListRef.current?.setNativeProps({ scrollEnabled: false });
@@ -116,7 +124,7 @@ const GenericImageCarousel = ({
         setTimeout(() => {
           flatListRef.current?.setNativeProps({ scrollEnabled: true });
         }, 50);
-        
+
         const { dx } = gestureState;
         if (Math.abs(dx) > 50) {
           if (dx > 0) {
@@ -130,14 +138,23 @@ const GenericImageCarousel = ({
     })
   ).current;
 
-  const handleZoomedScroll = useCallback((event: any) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const currentIndex = Math.round(event.nativeEvent.contentOffset.x / slideSize);
-    
-    if (currentIndex !== activeIndex && currentIndex >= 0 && currentIndex < images.length) {
-      setActiveIndex(currentIndex);
-    }
-  }, [activeIndex, images.length]);
+  const handleZoomedScroll = useCallback(
+    (event: any) => {
+      const slideSize = event.nativeEvent.layoutMeasurement.width;
+      const currentIndex = Math.round(
+        event.nativeEvent.contentOffset.x / slideSize
+      );
+
+      if (
+        currentIndex !== activeIndex &&
+        currentIndex >= 0 &&
+        currentIndex < images.length
+      ) {
+        setActiveIndex(currentIndex);
+      }
+    },
+    [activeIndex, images.length]
+  );
 
   // When the modal opens, ensure the right image is shown
   useEffect(() => {
@@ -160,8 +177,10 @@ const GenericImageCarousel = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && 
-               Math.abs(gestureState.dx) > 10;
+        return (
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+          Math.abs(gestureState.dx) > 10
+        );
       },
       onPanResponderGrant: () => {
         zoomedFlatListRef.current?.setNativeProps({ scrollEnabled: false });
@@ -173,7 +192,7 @@ const GenericImageCarousel = ({
         setTimeout(() => {
           zoomedFlatListRef.current?.setNativeProps({ scrollEnabled: true });
         }, 50);
-        
+
         const { dx } = gestureState;
         if (Math.abs(dx) > 50) {
           if (dx > 0) {
@@ -190,10 +209,10 @@ const GenericImageCarousel = ({
   // Navigation buttons for main carousel
   const renderNavigationButtons = () => {
     if (images.length <= 1) return null;
-    
+
     return (
       <>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.carouselNavButton, { left: 8 }]}
           onPress={() => navigateImage('prev')}
         >
@@ -201,8 +220,8 @@ const GenericImageCarousel = ({
             <Ionicons name="chevron-back" size={24} color="white" />
           </View>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.carouselNavButton, { right: 8 }]}
           onPress={() => navigateImage('next')}
         >
@@ -224,10 +243,7 @@ const GenericImageCarousel = ({
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
-            <TouchableOpacity 
-              activeOpacity={0.9} 
-              onPress={handleImagePress}
-            >
+            <TouchableOpacity activeOpacity={0.9} onPress={handleImagePress}>
               <Image
                 source={{ uri: item.url }}
                 style={[styles.carouselImage, { width, height }]}
@@ -240,21 +256,21 @@ const GenericImageCarousel = ({
           keyExtractor={(item, index) => `image-${index}`}
         />
       </View>
-      
+
       {renderNavigationButtons()}
-      
+
       <View style={styles.imageCounter}>
         <Text style={styles.imageCounterText}>
           {activeIndex + 1}/{images.length}
         </Text>
       </View>
-      
+
       {showBackButton && (
         <TouchableOpacity style={styles.backButton} onPress={onBackPress}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
       )}
-      
+
       {showFavoriteButton && (
         <TouchableOpacity
           style={styles.favoriteButton}
@@ -273,21 +289,21 @@ const GenericImageCarousel = ({
           )}
         </TouchableOpacity>
       )}
-      
+
       <View style={styles.indicatorContainer}>
         {images.map((_: any, index: number) => (
           <View
             key={`dot-${index}`}
             style={[
               styles.indicator,
-              index === activeIndex ? 
-                { width: 20, backgroundColor: colors.accentPrimary } : 
-                { backgroundColor: 'rgba(255, 255, 255, 0.5)' }
+              index === activeIndex
+                ? { width: 20, backgroundColor: colors.accentPrimary }
+                : { backgroundColor: 'rgba(255, 255, 255, 0.5)' },
             ]}
           />
         ))}
       </View>
-      
+
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.7)']}
         style={styles.bottomGradient}
@@ -300,21 +316,21 @@ const GenericImageCarousel = ({
         onRequestClose={() => setZoomedImageVisible(false)}
       >
         <View style={styles.modalContainer} {...zoomedPanResponder.panHandlers}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => setZoomedImageVisible(false)}
           >
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.modalNavButton, { left: 16 }]}
             onPress={() => navigateImage('prev', true)}
           >
             <Ionicons name="chevron-back" size={30} color="white" />
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.modalNavButton, { right: 16 }]}
             onPress={() => navigateImage('next', true)}
           >
@@ -337,24 +353,27 @@ const GenericImageCarousel = ({
             onMomentumScrollEnd={handleZoomedScroll}
             scrollEventThrottle={16}
             renderItem={({ item }) => (
-              <View 
-                style={{ 
-                  width, 
+              <View
+                style={{
+                  width,
                   height: screenHeight * 0.8,
-                  justifyContent: 'center', 
-                  alignItems: 'center' 
+                  justifyContent: 'center',
+                  alignItems: 'center',
                 }}
               >
                 <Image
                   source={{ uri: item.url }}
-                  style={[styles.zoomedImage, { width, height: screenHeight * 0.8 }]}
+                  style={[
+                    styles.zoomedImage,
+                    { width, height: screenHeight * 0.8 },
+                  ]}
                   resizeMode="contain"
                 />
               </View>
             )}
             keyExtractor={(item, index) => `zoomed-image-${index}`}
           />
-          
+
           <View style={styles.zoomedImageCounter}>
             <Text style={styles.imageCounterText}>
               {activeIndex + 1}/{images.length}
@@ -479,4 +498,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GenericImageCarousel; 
+export default GenericImageCarousel;

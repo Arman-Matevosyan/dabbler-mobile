@@ -6,7 +6,6 @@ import axios, {
 } from 'axios';
 import axiosClient from './axiosClient';
 
-// Extended AxiosRequestConfig that includes the option to skip showing error tooltips
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
   skipErrorTooltip?: boolean;
@@ -29,16 +28,12 @@ export function addErrorInterceptors(apiInstance: AxiosInstance): void {
     (response) => response,
 
     async (error: AxiosError) => {
-      console.log('API Error intercepted by errorInterceptor:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        url: error.config?.url,
-      });
-
       const config = error.config as CustomAxiosRequestConfig;
-      
-      // Skip showing the tooltip if skipErrorTooltip is set to true in the request config
-      if (!config?.skipErrorTooltip && (error.response?.status !== 401 || config?._retry)) {
+
+      if (
+        !config?.skipErrorTooltip &&
+        (error.response?.status !== 401 || config?._retry)
+      ) {
         setTimeout(() => {
           showErrorTooltip(error);
         }, 100);

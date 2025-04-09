@@ -1,28 +1,19 @@
-import { axiosClient } from '@/api';
-import { QueryKeys } from '@/constants/QueryKeys';
-import { Venue } from '@/types/types';
+import { UserQueryKeys, VenueQueryKeys } from '@/constants/QueryKeys';
+import { ActivityAPI } from '@/services/api';
+import { IVenue } from '@/types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-const fetchFavorites = async (userId: string): Promise<Venue[]> => {
-  try {
-    const response = await axiosClient.get(
-      '/content/venues/discover/favorites/me',
-      {
-        params: { userId, offset: 0, limit: 100 },
-      }
-    );
+interface UserData {
+  userId: string;
+  [key: string]: any;
+}
 
-    return response.data.response;
-  } catch (error) {
-    throw error;
-  }
-};
-
-export function useFavorites() {
+export const useFavorites = () => {
   const queryClient = useQueryClient();
 
-  const userData = queryClient.getQueryData([QueryKeys.userQueryKey]);
+  const userData =
+    queryClient.getQueryData<UserData>([UserQueryKeys.userData]) || null;
   const userId = userData?.userId;
 
   const {
@@ -30,10 +21,11 @@ export function useFavorites() {
     isLoading,
     error,
     refetch,
-  } = useQuery<Venue[]>({
-    queryKey: [QueryKeys.favoritesQueryKey, userId],
+  } = useQuery<IVenue[]>({
+    queryKey: [VenueQueryKeys.favorites, userId],
     queryFn: ({ queryKey }) => {
-      return fetchFavorites(queryKey[1]);
+      const id = queryKey[1] as string;
+      return ActivityAPI.getFavorites(id);
     },
     enabled: !!userId,
     staleTime: 0,
@@ -47,34 +39,42 @@ export function useFavorites() {
       }
 
       const previousFavorites =
-        queryClient.getQueryData<Venue[]>([
-          QueryKeys.favoritesQueryKey,
+        queryClient.getQueryData<IVenue[]>([
+          VenueQueryKeys.favorites,
           userId,
         ]) || [];
 
       const isFavorite = previousFavorites.some((fav) => fav.id === venueId);
 
+      const optimisticVenue = {
+        id: venueId,
+        _optimistic: true,
+        name: 'Loading...',
+        description: '',
+        address: {},
+        location: { type: 'Point', coordinates: [] },
+      } as unknown as IVenue;
+
       queryClient.setQueryData(
-        [QueryKeys.favoritesQueryKey, userId],
+        [VenueQueryKeys.favorites, userId],
         isFavorite
           ? previousFavorites.filter((fav) => fav.id !== venueId)
-          : [...previousFavorites, { id: venueId, _optimistic: true } as Venue]
+          : [...previousFavorites, optimisticVenue]
       );
 
       try {
-        isFavorite
-          ? await axiosClient.delete('/activity/favorites/me', {
-            params: { venueId },
-            })
-          : await axiosClient.post('/activity/favorites/me', { venueId });
+        if (isFavorite) {
+          await ActivityAPI.removeFavorite(venueId);
+        } else {
+          await ActivityAPI.addFavorite(venueId);
+        }
 
         await queryClient.invalidateQueries({
-          queryKey: [QueryKeys.favoritesQueryKey, userId],
+          queryKey: [VenueQueryKeys.favorites, userId],
         });
       } catch (error) {
-        console.error('Mutation error:', error);
         queryClient.setQueryData(
-          [QueryKeys.favoritesQueryKey, userId],
+          [VenueQueryKeys.favorites, userId],
           previousFavorites
         );
         throw error;
@@ -94,6 +94,4 @@ export function useFavorites() {
       [favoriteVenues]
     ),
   };
-}
-
-export default useFavorites;
+};

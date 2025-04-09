@@ -9,17 +9,17 @@ import { useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TextInputProps,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface FloatingLabelInputProps extends TextInputProps {
@@ -137,7 +137,11 @@ const FloatingLabelInput = ({
       </View>
       {error && (
         <View style={inputStyles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={14} color={colors.errorText} />
+          <MaterialCommunityIcons
+            name="alert-circle"
+            size={14}
+            color={colors.errorText}
+          />
           <ThemedText
             style={[inputStyles.errorText, { color: colors.errorText }]}
           >
@@ -300,7 +304,10 @@ export default function ForgotPasswordScreen() {
                 }}
               >
                 <ThemedText
-                  style={[styles.backToLoginText, { color: colors.accentPrimary }]}
+                  style={[
+                    styles.backToLoginText,
+                    { color: colors.accentPrimary },
+                  ]}
                 >
                   {t('auth.backToSignIn')}
                 </ThemedText>
@@ -311,4 +318,4 @@ export default function ForgotPasswordScreen() {
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
-} 
+}

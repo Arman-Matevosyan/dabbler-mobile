@@ -160,7 +160,6 @@ export const TooltipProvider: React.FC<TooltipProviderProps> = ({
         duration={duration}
         position={defaultPosition}
         onClose={hideTooltip}
-        details={details}
       />
     </TooltipContext.Provider>
   );

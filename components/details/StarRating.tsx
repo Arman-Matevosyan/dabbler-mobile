@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 
 interface StarRatingProps {
   rating?: number;
@@ -57,4 +56,4 @@ const StarRating = ({ rating = 0, size = 16, style = {} }: StarRatingProps) => {
   return <View style={[{ flexDirection: 'row' }, style]}>{renderStars()}</View>;
 };
 
-export default StarRating; 
+export default StarRating;

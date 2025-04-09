@@ -2,37 +2,48 @@ import GirlDoingYoga from '@/components/svg/GirlYoga';
 import Skeleton from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { useProfileCheckin } from '@/hooks';
+import { useCheckIn } from '@/hooks/checkin/useCheckIn';
 import { useTheme } from '@/providers/ThemeContext';
-import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { router } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Image, Pressable, StatusBar, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  Image,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
 
-// Header back button component
 const HeaderBackButton = ({ onPress }: { onPress: () => void }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  
+
   return (
-    <Pressable 
+    <Pressable
       style={styles.backButton}
       onPress={onPress}
-      android_ripple={{color: 'transparent'}}
+      android_ripple={{ color: 'transparent' }}
     >
-      <MaterialIcons 
-        name="arrow-back" 
-        size={24} 
-        color={colors.textPrimary} 
-      />
+      <MaterialIcons name="arrow-back" size={24} color={colors.textPrimary} />
     </Pressable>
   );
 };
 
-// Header top tabs
-const HeaderTabs = ({ activeTab, onChangeTab }: { activeTab: 'history' | 'limits'; onChangeTab: (tab: 'history' | 'limits') => void }) => {
+const HeaderTabs = ({
+  activeTab,
+  onChangeTab,
+}: {
+  activeTab: 'history' | 'limits';
+  onChangeTab: (tab: 'history' | 'limits') => void;
+}) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
@@ -43,38 +54,48 @@ const HeaderTabs = ({ activeTab, onChangeTab }: { activeTab: 'history' | 'limits
         <Pressable
           style={styles.tabTextContainer}
           onPress={() => onChangeTab('history')}
-          android_ripple={{color: 'transparent'}}
-          pressRetentionOffset={{top: 10, left: 10, bottom: 10, right: 10}}
+          android_ripple={{ color: 'transparent' }}
+          pressRetentionOffset={{ top: 10, left: 10, bottom: 10, right: 10 }}
         >
-          <ThemedText 
+          <ThemedText
             style={[
-              styles.tabText, 
-              { color: activeTab === 'history' ? colors.tint : colors.textSecondary }
+              styles.tabText,
+              {
+                color:
+                  activeTab === 'history' ? colors.tint : colors.textSecondary,
+              },
             ]}
           >
             {t('checkin.history')}
           </ThemedText>
           {activeTab === 'history' && (
-            <View style={[styles.tabIndicator, { backgroundColor: colors.tint }]} />
+            <View
+              style={[styles.tabIndicator, { backgroundColor: colors.tint }]}
+            />
           )}
         </Pressable>
-        
+
         <Pressable
           style={styles.tabTextContainer}
           onPress={() => onChangeTab('limits')}
-          android_ripple={{color: 'transparent'}}
-          pressRetentionOffset={{top: 10, left: 10, bottom: 10, right: 10}}
+          android_ripple={{ color: 'transparent' }}
+          pressRetentionOffset={{ top: 10, left: 10, bottom: 10, right: 10 }}
         >
-          <ThemedText 
+          <ThemedText
             style={[
-              styles.tabText, 
-              { color: activeTab === 'limits' ? colors.tint : colors.textSecondary }
+              styles.tabText,
+              {
+                color:
+                  activeTab === 'limits' ? colors.tint : colors.textSecondary,
+              },
             ]}
           >
             {t('checkin.limits')}
           </ThemedText>
           {activeTab === 'limits' && (
-            <View style={[styles.tabIndicator, { backgroundColor: colors.tint }]} />
+            <View
+              style={[styles.tabIndicator, { backgroundColor: colors.tint }]}
+            />
           )}
         </Pressable>
       </View>
@@ -86,25 +107,24 @@ const HeaderTabs = ({ activeTab, onChangeTab }: { activeTab: 'history' | 'limits
 const CheckinSkeleton = () => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  
+
   return (
-    <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
+    <View
+      style={[styles.contentContainer, { backgroundColor: colors.background }]}
+    >
       <View style={styles.monthHeader}>
         <Skeleton width={120} height={24} style={styles.skeletonHeader} />
       </View>
-      
+
       {[1, 2, 3].map((_, index) => (
-        <View 
-          key={index} 
-          style={[
-            styles.classCard, 
-            { backgroundColor: colors.background }
-          ]}
+        <View
+          key={index}
+          style={[styles.classCard, { backgroundColor: colors.background }]}
         >
           <View style={styles.imageContainer}>
             <Skeleton width={80} height={80} borderRadius={6} />
           </View>
-          
+
           <View style={styles.detailsContainer}>
             <Skeleton width={150} height={18} style={{ marginBottom: 8 }} />
             <Skeleton width={180} height={14} style={{ marginBottom: 8 }} />
@@ -120,15 +140,15 @@ const CheckinSkeleton = () => {
 // Empty state component
 const EmptyState = () => {
   const { t } = useTranslation();
-  
+
   return (
     <View style={styles.emptyStateContainer}>
       <GirlDoingYoga width={200} height={200} />
-      
+
       <ThemedText style={styles.noCheckinsTitle}>
         {t('checkin.noCheckins')}
       </ThemedText>
-      
+
       <ThemedText style={styles.noCheckinsMessage}>
         {t('checkin.emptyStateMessage')}
       </ThemedText>
@@ -145,7 +165,7 @@ const HistoryContent = ({ checkIn }: { checkIn: any[] }) => {
   const handleClassPress = (classId: string, date?: string) => {
     router.push({
       pathname: '/classes/details/[id]',
-      params: { id: classId, date }
+      params: { id: classId, date },
     });
   };
 
@@ -155,12 +175,13 @@ const HistoryContent = ({ checkIn }: { checkIn: any[] }) => {
   }
 
   const renderClassItem = ({ item }: { item: any }) => {
-    const coverImage = item.covers && item.covers.length > 0 && item.covers[0]?.url
-      ? item.covers[0].url
-      : `https://picsum.photos/400/200?random=${item.id}`;
+    const coverImage =
+      item.covers && item.covers.length > 0 && item.covers[0]?.url
+        ? item.covers[0].url
+        : `https://picsum.photos/400/200?random=${item.id}`;
 
     let dateTimeStr = '';
-    
+
     if (item.date) {
       try {
         const scheduleDate = parseISO(item.date);
@@ -171,7 +192,7 @@ const HistoryContent = ({ checkIn }: { checkIn: any[] }) => {
           new Date(scheduleDate.getTime() + (item.duration || 60) * 60 * 1000),
           'HH:mm'
         );
-        
+
         dateTimeStr = `${day}, ${monthDay} - ${startTime}-${endTime}`;
       } catch (error) {
         console.error('Date parsing error:', error);
@@ -180,10 +201,7 @@ const HistoryContent = ({ checkIn }: { checkIn: any[] }) => {
 
     return (
       <Pressable
-        style={[
-          styles.classCard,
-          { backgroundColor: colors.background }
-        ]}
+        style={[styles.classCard, { backgroundColor: colors.background }]}
         onPress={() => handleClassPress(item.id, item.date || undefined)}
       >
         <View style={styles.imageContainer}>
@@ -191,37 +209,54 @@ const HistoryContent = ({ checkIn }: { checkIn: any[] }) => {
         </View>
         <View style={styles.detailsContainer}>
           <ThemedText style={styles.className}>{item.name}</ThemedText>
-          
+
           {dateTimeStr && (
-            <ThemedText style={[styles.dateText, { color: colors.textSecondary }]}>
+            <ThemedText
+              style={[styles.dateText, { color: colors.textSecondary }]}
+            >
               {dateTimeStr}
             </ThemedText>
           )}
-          
+
           <View style={styles.infoRow}>
-            <ThemedText style={[styles.venueText, { color: colors.textSecondary }]}>
+            <ThemedText
+              style={[styles.venueText, { color: colors.textSecondary }]}
+            >
               {item.venue?.name || ''} -
             </ThemedText>
           </View>
-          
+
           <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={14} color={colors.textSecondary} style={styles.icon} />
-            <ThemedText style={[styles.instructorText, { color: colors.textSecondary }]}>
+            <Ionicons
+              name="person-outline"
+              size={14}
+              color={colors.textSecondary}
+              style={styles.icon}
+            />
+            <ThemedText
+              style={[styles.instructorText, { color: colors.textSecondary }]}
+            >
               {item.instructorInfo || item.instructorName || ''}
             </ThemedText>
           </View>
-          
+
           <View style={styles.categoryContainer}>
-            <MaterialCommunityIcons name="tag-outline" size={14} color={colors.textSecondary} style={styles.icon} />
-            {item.categories && item.categories.map((category: string, index: number) => (
-              <ThemedText 
-                key={index} 
-                style={[styles.categoryText, { color: colors.textSecondary }]}
-              >
-                {index !== 0 && " • "}
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </ThemedText>
-            ))}
+            <MaterialCommunityIcons
+              name="tag-outline"
+              size={14}
+              color={colors.textSecondary}
+              style={styles.icon}
+            />
+            {item.categories &&
+              item.categories.map((category: string, index: number) => (
+                <ThemedText
+                  key={index}
+                  style={[styles.categoryText, { color: colors.textSecondary }]}
+                >
+                  {index !== 0 && ' • '}
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </ThemedText>
+              ))}
           </View>
         </View>
       </Pressable>
@@ -229,11 +264,13 @@ const HistoryContent = ({ checkIn }: { checkIn: any[] }) => {
   };
 
   return (
-    <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
+    <View
+      style={[styles.contentContainer, { backgroundColor: colors.background }]}
+    >
       <View style={styles.monthHeader}>
         <ThemedText style={styles.monthTitle}>March, 2025</ThemedText>
       </View>
-      
+
       <FlatList
         data={checkIn}
         renderItem={renderClassItem}
@@ -250,52 +287,87 @@ const LimitsContent = () => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
-  
-  const username = "Vahan!";
-  
+
+  const username = 'Vahan!';
+
   return (
-    <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
+    <View
+      style={[styles.contentContainer, { backgroundColor: colors.background }]}
+    >
       <ThemedText style={styles.welcomeTitle}>Hi {username}</ThemedText>
-      
-      <ThemedText style={[styles.welcomeDescription, { color: colors.textSecondary }]}>
+
+      <ThemedText
+        style={[styles.welcomeDescription, { color: colors.textSecondary }]}
+      >
         {t('checkin.trackLimits')}
       </ThemedText>
-      
+
       <View style={styles.limitSection}>
         <View style={styles.limitHeader}>
-          <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
-          <ThemedText style={styles.limitHeaderText}>{t('checkin.resetDates')}</ThemedText>
+          <Ionicons
+            name="time-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
+          <ThemedText style={styles.limitHeaderText}>
+            {t('checkin.resetDates')}
+          </ThemedText>
         </View>
-        
+
         <ThemedText style={[styles.limitText, { color: colors.textSecondary }]}>
           {t('checkin.totalCheckinsReset', { date: 'Sun, 6 Apr.' })}
         </ThemedText>
-        
-        <ThemedText style={[styles.limitText, { color: colors.textSecondary, marginTop: 16 }]}>
+
+        <ThemedText
+          style={[
+            styles.limitText,
+            { color: colors.textSecondary, marginTop: 16 },
+          ]}
+        >
           {t('checkin.allVenueLimits')}
         </ThemedText>
       </View>
-      
+
       <ThemedText style={styles.monthSection}>March</ThemedText>
-      
-      <View style={[styles.venueCard, { backgroundColor: colorScheme === 'dark' ? '#222429' : '#F7F7F7' }]}>
-        <ThemedText style={styles.venueCardTitle}>{t('checkin.venueCheckins')}</ThemedText>
-        <ThemedText style={[styles.visitCount, { color: colors.textSecondary }]}>
+
+      <View
+        style={[
+          styles.venueCard,
+          { backgroundColor: colorScheme === 'dark' ? '#222429' : '#F7F7F7' },
+        ]}
+      >
+        <ThemedText style={styles.venueCardTitle}>
+          {t('checkin.venueCheckins')}
+        </ThemedText>
+        <ThemedText
+          style={[styles.visitCount, { color: colors.textSecondary }]}
+        >
           3 {t('checkin.visitsInMarch')}
         </ThemedText>
-        
+
         <View style={styles.venueItem}>
-          <Image 
-            source={{ uri: "https://images.unsplash.com/photo-1547919307-1ecb10702e6f" }} 
-            style={styles.venueImage} 
+          <Image
+            source={{
+              uri: 'https://images.unsplash.com/photo-1547919307-1ecb10702e6f',
+            }}
+            style={styles.venueImage}
           />
           <ThemedText style={styles.venueName}>Chimosa</ThemedText>
-          
+
           <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { backgroundColor: colors.tint }]} />
-            <View style={[styles.progressBackground, { backgroundColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' }]} />
+            <View
+              style={[styles.progressBar, { backgroundColor: colors.tint }]}
+            />
+            <View
+              style={[
+                styles.progressBackground,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#333' : '#E0E0E0',
+                },
+              ]}
+            />
           </View>
-          
+
           <View style={styles.limitNumbers}>
             <ThemedText style={{ color: colors.tint }}>3</ThemedText>
             <ThemedText style={{ color: colors.textSecondary }}>4</ThemedText>
@@ -311,10 +383,12 @@ export default function ProfileCheckinScreen() {
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'history' | 'limits'>('history');
-  const { checkIn, isLoading } = useProfileCheckin();
+  const { checkInData, isLoading } = useCheckIn();
 
   useLayoutEffect(() => {
-    StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
+    StatusBar.setBarStyle(
+      colorScheme === 'dark' ? 'light-content' : 'dark-content'
+    );
     return () => {
       StatusBar.setBarStyle('default');
     };
@@ -328,24 +402,21 @@ export default function ProfileCheckinScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <HeaderBackButton onPress={handleGoBack} />
-        <ThemedText style={styles.headerTitle}>{t('checkin.checkins')}</ThemedText>
+        <ThemedText style={styles.headerTitle}>
+          {t('checkin.checkins')}
+        </ThemedText>
         <View style={styles.headerRight} />
       </View>
 
-      <HeaderTabs 
-        activeTab={activeTab} 
-        onChangeTab={setActiveTab} 
-      />
+      <HeaderTabs activeTab={activeTab} onChangeTab={setActiveTab} />
 
       <View style={styles.content}>
         {isLoading ? (
           <CheckinSkeleton />
+        ) : activeTab === 'history' ? (
+          <HistoryContent checkIn={checkInData || []} />
         ) : (
-          activeTab === 'history' ? (
-            <HistoryContent checkIn={checkIn || []} />
-          ) : (
-            <LimitsContent />
-          )
+          <LimitsContent />
         )}
       </View>
     </View>

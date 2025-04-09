@@ -1,10 +1,8 @@
 import { setupGlobalErrorHandling } from '@/api/errorInterceptor';
 import '@/app/i18n'; // Import i18n configuration
+import SplashScreen from '@/components/ui/SplashScreen';
 import { Colors } from '@/constants/Colors';
 import { TooltipProvider } from '@/contexts/TooltipContext';
-import { useUserProfile } from '@/hooks/profile/useUserProfile';
-import AuthProvider, { useAuth } from '@/providers/AuthProvider';
-import NetworkProvider from '@/providers/NetworkProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import {
     ThemeProvider as CustomThemeProvider,
@@ -12,9 +10,8 @@ import {
 } from '@/providers/ThemeContext';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useFonts } from 'expo-font';
-import * as Linking from 'expo-linking';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { LogBox, StyleSheet, View } from 'react-native';
@@ -25,41 +22,18 @@ LogBox.ignoreAllLogs(true);
 
 setupGlobalErrorHandling();
 
-const linking = {
-  prefixes: [Linking.createURL('/'), 'dabbler://', 'https://dabbler.app'],
-  config: {
-    screens: {
-      Profile: 'profile',
-      '(tabs)': {
-        screens: {
-          checkin: {
-            path: 'checkin',
-            parse: {
-              url: (url: string) => decodeURIComponent(url),
-            },
-          },
-        }
-      }
-    },
-  },
-};
-
-SplashScreen.preventAutoHideAsync();
+ExpoSplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
         <CustomThemeProvider>
-          <NetworkProvider>
-            <AuthProvider>
-              <TooltipProvider>
-                <BottomSheetModalProvider>
-                  <RootLayoutNav />
-                </BottomSheetModalProvider>
-              </TooltipProvider>
-            </AuthProvider>
-          </NetworkProvider>
+          <TooltipProvider>
+            <BottomSheetModalProvider>
+              <RootLayoutNav />
+            </BottomSheetModalProvider>
+          </TooltipProvider>
         </CustomThemeProvider>
       </QueryProvider>
     </GestureHandlerRootView>
@@ -72,23 +46,26 @@ function RootLayoutNav() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
   const [isReady, setIsReady] = useState<boolean>(false);
+  const [showSplash, setShowSplash] = useState<boolean>(true);
   const colors = Colors[colorScheme];
-  const auth = useAuth();
-  const { refetch: fetchUser } = useUserProfile();
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
-      setIsReady(true);
+      ExpoSplashScreen.hideAsync();
     }
   }, [loaded]);
 
-  if (!loaded || !isReady) return null;
+  if (!loaded) return null;
 
   return (
     <View
       style={[styles.rootContainer, { backgroundColor: colors.background }]}
     >
+      {showSplash && (
+        <SplashScreen 
+          onAnimationComplete={() => setShowSplash(false)}
+        />
+      )}
       <SafeAreaProvider>
         <View
           style={[styles.container, { backgroundColor: colors.background }]}

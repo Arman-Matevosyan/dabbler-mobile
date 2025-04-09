@@ -4,13 +4,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Animated,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { CategoryList } from './CategoryList';
 
@@ -45,14 +45,14 @@ export const SearchWithCategories = ({
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  
+
   // Use ref instead of state to track searching status
   const isSearching = useRef(false);
 
   const handleSearchChange = (text: string) => {
     isSearching.current = true;
     onSearchChange(text);
-    
+
     // Reset the flag after a short delay
     setTimeout(() => {
       isSearching.current = false;

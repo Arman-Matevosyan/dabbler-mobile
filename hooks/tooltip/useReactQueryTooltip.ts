@@ -13,7 +13,6 @@ export function extractErrorDetails(error: unknown): {
   message: string;
   details?: string;
 } {
-
   let message = 'An unknown error occurred';
   let details: string | undefined = undefined;
 
@@ -27,7 +26,7 @@ export function extractErrorDetails(error: unknown): {
   if (error instanceof AxiosError || (error as any)?.isAxiosError) {
     const axiosError = error as AxiosError<ApiErrorResponse>;
     const status = axiosError.response?.status;
-
+    console.log(axiosError);
     if (status === 404) {
       message = 'Resource not found. The requested item does not exist.';
     } else if (status === 403) {

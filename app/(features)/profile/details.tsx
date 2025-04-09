@@ -1,7 +1,7 @@
 import ProfilePageSkeleton from '@/components/ui/MainTabsSkeletons/ProfilePageSkeleton';
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useUserProfile } from '@/hooks/profile/useUserProfile';
+import { useUser } from '@/hooks';
 import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -10,7 +10,7 @@ import { SafeAreaView, TouchableOpacity, View } from 'react-native';
 
 export default function AccountDetailsScreen() {
   const { styles, colors } = useProfileTabStyles();
-  const { user, isLoading } = useUserProfile();
+  const { user, isLoading } = useUser();
   const { t } = useTranslation();
 
   if (isLoading) {

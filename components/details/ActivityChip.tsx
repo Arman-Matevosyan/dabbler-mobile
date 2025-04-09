@@ -1,7 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/providers/ThemeContext';
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface ActivityChipProps {
   title: string;
@@ -11,9 +10,15 @@ interface ActivityChipProps {
 const ActivityChip = ({ title, style }: ActivityChipProps) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
-  
+
   return (
-    <View style={[styles.activityChip, { backgroundColor: colors.secondary }, style]}>
+    <View
+      style={[
+        styles.activityChip,
+        { backgroundColor: colors.secondary },
+        style,
+      ]}
+    >
       <Text style={[styles.activityChipText, { color: colors.textPrimary }]}>
         {title}
       </Text>
@@ -35,4 +40,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ActivityChip; 
+export default ActivityChip;

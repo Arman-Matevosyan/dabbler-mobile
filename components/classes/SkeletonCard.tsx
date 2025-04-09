@@ -3,10 +3,10 @@ import { useTheme } from '@/providers/ThemeContext';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    withRepeat,
-    withSequence,
-    withTiming
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 
 interface SkeletonCardProps {
@@ -29,53 +29,19 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({ count = 3 }) => {
   }));
 
   const renderSkeleton = () => (
-    <Animated.View 
-      style={[
-        styles.card,
-        { backgroundColor: colors.background },
-        pulseAnim
-      ]}
+    <Animated.View
+      style={[styles.card, { backgroundColor: colors.background }, pulseAnim]}
     >
       <View style={styles.imageContainer}>
-        <View 
-          style={[
-            styles.image,
-            { backgroundColor: colors.border }
-          ]} 
-        />
+        <View style={[styles.image, { backgroundColor: colors.border }]} />
       </View>
       <View style={styles.content}>
-        <View 
-          style={[
-            styles.title,
-            { backgroundColor: colors.border }
-          ]} 
-        />
-        <View 
-          style={[
-            styles.time,
-            { backgroundColor: colors.border }
-          ]} 
-        />
+        <View style={[styles.title, { backgroundColor: colors.border }]} />
+        <View style={[styles.time, { backgroundColor: colors.border }]} />
         <View style={styles.details}>
-          <View 
-            style={[
-              styles.detail,
-              { backgroundColor: colors.border }
-            ]} 
-          />
-          <View 
-            style={[
-              styles.detail,
-              { backgroundColor: colors.border }
-            ]} 
-          />
-          <View 
-            style={[
-              styles.detail,
-              { backgroundColor: colors.border }
-            ]} 
-          />
+          <View style={[styles.detail, { backgroundColor: colors.border }]} />
+          <View style={[styles.detail, { backgroundColor: colors.border }]} />
+          <View style={[styles.detail, { backgroundColor: colors.border }]} />
         </View>
       </View>
     </Animated.View>
@@ -132,4 +98,4 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 4,
   },
-}); 
+});

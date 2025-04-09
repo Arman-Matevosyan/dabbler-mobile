@@ -6,25 +6,21 @@ import { router } from 'expo-router';
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StatusBar, StyleSheet, View } from 'react-native';
-import { CheckinTabs } from './components/CheckinTabs';
-import { FreeClassesList } from './components/FreeClassesList';
-import { ScheduledClassesList } from './components/ScheduledClassesList';
+import CheckinTabs from './_components/CheckinTabs';
+import FreeClassesList from './_components/FreeClassesList';
+import ScheduledClassesList from './_components/ScheduledClassesList';
 
 const HeaderBackButton = ({ onPress }: { onPress: () => void }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  
+
   return (
-    <Pressable 
+    <Pressable
       style={styles.backButton}
       onPress={onPress}
-      android_ripple={{color: 'transparent'}}
+      android_ripple={{ color: 'transparent' }}
     >
-      <MaterialIcons 
-        name="arrow-back" 
-        size={24} 
-        color={colors.textPrimary} 
-      />
+      <MaterialIcons name="arrow-back" size={24} color={colors.textPrimary} />
     </Pressable>
   );
 };
@@ -52,10 +48,10 @@ interface CheckinClassesScreenProps {
   onBackPress?: () => void;
 }
 
-export const CheckinClassesScreen: React.FC<CheckinClassesScreenProps> = ({ 
-  data, 
+const CheckinClassesScreen: React.FC<CheckinClassesScreenProps> = ({
+  data,
   isLoading = false,
-  onBackPress
+  onBackPress,
 }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
@@ -63,7 +59,9 @@ export const CheckinClassesScreen: React.FC<CheckinClassesScreenProps> = ({
   const [activeTab, setActiveTab] = useState<'free' | 'scheduled'>('free');
 
   useLayoutEffect(() => {
-    StatusBar.setBarStyle(colorScheme === 'dark' ? 'light-content' : 'dark-content');
+    StatusBar.setBarStyle(
+      colorScheme === 'dark' ? 'light-content' : 'dark-content'
+    );
     return () => {
       StatusBar.setBarStyle('default');
     };
@@ -81,26 +79,28 @@ export const CheckinClassesScreen: React.FC<CheckinClassesScreenProps> = ({
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <HeaderBackButton onPress={handleGoBack} />
-        <ThemedText style={styles.headerTitle}>{t('checkin.checkins')}</ThemedText>
+        <ThemedText style={styles.headerTitle}>
+          {t('checkin.checkins')}
+        </ThemedText>
         <View style={styles.headerRight} />
       </View>
 
-      <CheckinTabs 
-        activeTab={activeTab} 
-        onChangeTab={setActiveTab} 
+      <CheckinTabs
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
         freeClassesCount={data.freeClasses?.length || 0}
         scheduledClassesCount={data.scheduledClasses?.length || 0}
       />
 
       <View style={styles.content}>
         {activeTab === 'free' ? (
-          <FreeClassesList 
-            classes={data.freeClasses || []} 
+          <FreeClassesList
+            classes={data.freeClasses || []}
             isLoading={isLoading}
           />
         ) : (
-          <ScheduledClassesList 
-            classes={data.scheduledClasses || []} 
+          <ScheduledClassesList
+            classes={data.scheduledClasses || []}
             isLoading={isLoading}
           />
         )}
@@ -137,4 +137,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-}); 
+});
+
+export default CheckinClassesScreen;

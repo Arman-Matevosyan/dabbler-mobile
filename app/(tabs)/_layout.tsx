@@ -135,4 +135,15 @@ const styles = StyleSheet.create({
   tabBarIcon: {
     marginBottom: 0,
   },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F44336',
+    borderWidth: 1,
+    borderColor: 'white',
+  },
 });

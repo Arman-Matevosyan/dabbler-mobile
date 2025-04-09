@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Dimensions, StatusBar } from "react-native";
+import { useEffect, useState } from 'react';
+import { Dimensions, StatusBar } from 'react-native';
 
 export const useStatusBarHeight = () => {
   const [statusBarHeight, setStatusBarHeight] = useState(
@@ -7,7 +7,7 @@ export const useStatusBarHeight = () => {
   );
 
   useEffect(() => {
-    const subscription = Dimensions.addEventListener("change", () => {
+    const subscription = Dimensions.addEventListener('change', () => {
       setStatusBarHeight(StatusBar.currentHeight);
     });
 

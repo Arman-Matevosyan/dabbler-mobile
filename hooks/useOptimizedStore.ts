@@ -7,7 +7,10 @@ export function useStoreSelector<T, U>(
   selector: (state: T) => U,
   equalityFn?: (a: U, b: U) => boolean
 ): U {
-  return store(selector, equalityFn);
+  if (equalityFn) {
+    return store((state) => selector(state));
+  }
+  return store(selector);
 }
 
 export function useStoreWithQueryCache() {
@@ -35,4 +38,4 @@ export function useStoreWithQueryCache() {
   };
 }
 
-export default { useStoreSelector, useStoreWithQueryCache }; 
+export default { useStoreSelector, useStoreWithQueryCache };

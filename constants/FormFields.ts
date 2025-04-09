@@ -1,4 +1,4 @@
-import { FieldType } from '@/types/types';
+import { FieldType } from "@/types";
 
 export const loginFields: FieldType[] = [
   {

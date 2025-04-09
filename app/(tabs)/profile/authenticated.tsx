@@ -4,31 +4,46 @@ import ProfileActions from '@/components/profile/ProfileActions';
 import UserInfoCard from '@/components/profile/UserInfoCard';
 import ProfileSkeleton from '@/components/ui/MainTabsSkeletons/ProfileSkeleton';
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
-import { useAvatarUpload } from '@/hooks/profile/useAvatarUpload';
-import { useUserProfile } from '@/hooks/profile/useUserProfile';
+import { Colors } from '@/constants/Colors';
+import { useUser } from '@/hooks';
 import { useStatusBarHeight } from '@/hooks/useStatusBarHeight';
-import { useAuth } from '@/providers/AuthProvider';
-import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
+import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useMemo } from 'react';
-import { SafeAreaView, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { SafeAreaView, StyleSheet, TouchableOpacity, View } from 'react-native';
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  settingsButton: {
+    padding: 8,
+  },
+});
 
 const AuthenticatedProfile: React.FC = () => {
+  const { colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const statusBarHeight = useStatusBarHeight();
-  const { styles, colors } = useProfileTabStyles();
-  const { isLoading: isAuthLoading } = useAuth();
   const {
     user,
-    isLoading: isUserLoading,
-    refetch: fetchUser,
-  } = useUserProfile();
-  const { pickImage, isUploading: isAvatarUploadLoading } = useAvatarUpload();
+    isLoading,
+    refetch,
+    uploadAvatar: { pickImage, isUploading: isAvatarUploadLoading },
+  } = useUser();
+
+  const [showPlansModal, setShowPlansModal] = useState(false);
 
   const handleAvatarUpload = async () => {
     try {
       await pickImage();
-      await fetchUser();
+      await refetch();
     } catch (error) {
       console.error('Avatar upload error:', error);
     }
@@ -38,10 +53,18 @@ const AuthenticatedProfile: React.FC = () => {
     router.push(`/(features)/profile/${path}` as any);
   };
 
+  const openPlansModal = () => {
+    setShowPlansModal(true);
+  };
+
+  const closePlansModal = () => {
+    setShowPlansModal(false);
+  };
+
   const userInfoCard = useMemo(
     () => (
       <UserInfoCard
-        user={user}
+        user={user as any}
         handleAvatarUpload={handleAvatarUpload}
         isAvatarUploadLoading={isAvatarUploadLoading}
       />
@@ -62,9 +85,15 @@ const AuthenticatedProfile: React.FC = () => {
     [colors]
   );
 
-  const isLoading = isAuthLoading || isUserLoading;
-
   if (isLoading) {
+    return (
+      <SkeletonScreen>
+        <ProfileSkeleton />
+      </SkeletonScreen>
+    );
+  }
+
+  if (!user) {
     return (
       <SkeletonScreen>
         <ProfileSkeleton />
@@ -86,6 +115,7 @@ const AuthenticatedProfile: React.FC = () => {
         <TouchableOpacity
           style={styles.settingsButton}
           onPress={() => handleNavigateToProfile('settings')}
+          activeOpacity={1}
         >
           <MaterialCommunityIcons
             name="cog"

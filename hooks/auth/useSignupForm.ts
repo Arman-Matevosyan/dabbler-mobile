@@ -1,4 +1,4 @@
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { SignupFormData, signupSchema } from '@/utils/validation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -13,12 +13,12 @@ export const useSignupForm = () => {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     Keyboard.dismiss();
-    await signup(
-      data.signupEmail,
-      data.signupPassword,
-      data.firstName,
-      data.lastName
-    );
+    signup({
+      email: data.signupEmail,
+      password: data.signupPassword,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    });
     form.reset();
   });
 

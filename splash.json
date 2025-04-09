@@ -1,0 +1,7 @@
+{
+  "splash": {
+    "image": "./assets/images/Artboard.png",
+    "backgroundColor": "#121212",
+    "imageResizeMode": "contain"
+  }
+} 

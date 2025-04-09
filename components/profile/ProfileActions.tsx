@@ -39,12 +39,16 @@ const ProfileActions: React.FC<ProfileActionsProps> = ({ colors }) => {
     },
   ];
 
+  const handleActionPress = (action: ActionItem) => {
+    router.push(action.route as any);
+  };
+
   return (
     <View style={[profileStyles.actionButtonsContainer, { marginTop: 16 }]}>
       <View style={styles.actionsContainer}>
         {actions.map((action) => (
           <TouchableOpacity
-            onPress={() => router.push(action.route as any)}
+            onPress={() => handleActionPress(action)}
             key={action.name}
             activeOpacity={1}
             style={styles.actionItem}

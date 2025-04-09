@@ -128,16 +128,16 @@ The authentication system in Dabbler Mobile is built with a robust token-based a
 ## Key Files
 
 - `api/axiosClient.ts`: Axios instance with token refresh interceptors
-- `store/authStore.ts`: Zustand store for auth state management
+- `hooks/auth/useAuth.ts`: React Query-based authentication hook with token management
 - `services/auth/socialAuth.ts`: Social auth flow helpers
-- `providers/AuthProvider.tsx`: React context for auth state and deep link handling
 - `services/query/queryClient.ts`: React Query configuration
 
 ## Authentication Flow
 
 1. **Login Flow**:
    - User logs in with email/password or social provider
-   - Access token and refresh token are stored in SecureStore
+   - Access token and refresh token are stored securely using the auth utilities
+   - React Query state is updated to reflect authenticated status
    - User is redirected to authenticated area
 
 2. **API Request Flow**:

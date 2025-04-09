@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { usePlans } from '@/hooks';
-import { useClientToken } from '@/hooks/payments';
+import { useClientToken, usePlans } from '@/hooks';
+import { IPlan } from '@/hooks/payment/payment.interfaces';
 import { useTheme } from '@/providers/ThemeContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -10,15 +10,15 @@ import { WebView } from 'react-native-webview';
 
 export default function PaymentScreen() {
   const { data, isLoading } = useClientToken();
-  const token = data?.token ?? '';
-  const merchantId = data?.merchantId ?? '';
+  const token = data && data.length > 0 ? data[0].token : '';
+  const merchantId = data && data.length > 0 ? data[0].merchantId : '';
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { plan } = useLocalSearchParams<{ plan: string }>();
-  const { plans } = usePlans();
+  const { data: plans = [] } = usePlans();
   const { t } = useTranslation();
-  const currentPlan = plans.find((item) => item.id === plan);
-  const handleMessage = (event) => {
+  const currentPlan = plans.find((item: IPlan) => item.id === plan);
+  const handleMessage = (event: any) => {
     try {
       const receivedData = JSON.parse(event.nativeEvent.data);
       const nonce = receivedData?.payload?.nonce;
@@ -42,7 +42,6 @@ export default function PaymentScreen() {
       </View>
     );
   }
-
   return (
     <WebView
       source={{

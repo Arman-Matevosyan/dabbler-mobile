@@ -1,13 +1,12 @@
-import Svg, { Path } from "react-native-svg"
+import Svg, { Path, SvgProps } from 'react-native-svg';
 
-function QrCheck(props) {
+function QrCheck(props: SvgProps) {
   return (
     <Svg
       width={3084}
       height={1944}
       viewBox="0 0 3084 1944"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
       <Path
@@ -123,7 +122,7 @@ function QrCheck(props) {
         fill="#C2C2E0"
       />
     </Svg>
-  )
+  );
 }
 
-export default QrCheck
+export default QrCheck;

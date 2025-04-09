@@ -1,15 +1,17 @@
 import Skeleton from '@/components/ui/Skeleton';
 import { Colors } from '@/constants/Colors';
-import { useSubscriptions } from '@/hooks';
+import { useSubscriptions } from '@/hooks/payment/useSubscriptions';
 import { useTheme } from '@/providers/ThemeContext';
+import { ISubscription } from '@/types';
 import { router } from 'expo-router';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export const MembershipStatus = () => {
+export const MembershipStatus: React.FC = () => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  const { subscription, isLoading } = useSubscriptions();
+  const { data: subscription, isLoading } = useSubscriptions();
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -21,11 +23,17 @@ export const MembershipStatus = () => {
   }
 
   const handlePress = () => {
-    router.push('/(features)/profile/plans' as any);
+    router.push('/(features)/profile/plans');
   };
 
-  const isActive = subscription && subscription.status && subscription.plan;
-  const planName = isActive ? subscription.plan.name : t('profile.inactive');
+  const typedSubscription = subscription as ISubscription | undefined;
+
+  const isActive = typedSubscription && typedSubscription.plan?.planId;
+
+  const planName =
+    isActive && typedSubscription?.plan
+      ? typedSubscription.plan.name
+      : t('profile.inactive');
 
   return (
     <View style={styles.container}>

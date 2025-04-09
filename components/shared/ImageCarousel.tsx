@@ -2,15 +2,15 @@ import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/providers/ThemeContext';
 import React, { useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Image,
-    Modal,
-    PanResponder,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  PanResponder,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -37,18 +37,21 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onPanResponderMove: Animated.event(
-      [null, { dx: pan.x }],
-      { useNativeDriver: false }
-    ),
+    onPanResponderMove: Animated.event([null, { dx: pan.x }], {
+      useNativeDriver: false,
+    }),
     onPanResponderRelease: (_, gestureState) => {
       if (Math.abs(gestureState.dx) > 50) {
         if (gestureState.dx > 0) {
           // Swipe right
-          setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+          setCurrentIndex((prev) =>
+            prev === 0 ? images.length - 1 : prev - 1
+          );
         } else {
           // Swipe left
-          setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+          setCurrentIndex((prev) =>
+            prev === images.length - 1 ? 0 : prev + 1
+          );
         }
       }
       Animated.spring(pan, {
@@ -107,7 +110,9 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
             style={styles.closeButton}
             onPress={() => setIsFullScreen(false)}
           >
-            <Text style={[styles.closeButtonText, { color: colors.text }]}>×</Text>
+            <Text style={[styles.closeButtonText, { color: colors.text }]}>
+              ×
+            </Text>
           </TouchableOpacity>
           {renderImage(true)}
         </View>
@@ -156,4 +161,4 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: 'bold',
   },
-}); 
+});

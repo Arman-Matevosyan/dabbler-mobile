@@ -1,23 +1,25 @@
 import { axiosClient } from '@/api';
-import { QueryKeys } from '@/constants/QueryKeys';
-import { ClassDetailResponse } from '@/hooks/classes/useClassDetails';
+import { ClassQueryKeys } from '@/constants/QueryKeys';
+import type { ClassDetailResponse } from '@/hooks/content/useClasses';
 import { queryClient } from '@/lib/queryClient';
-import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { BookingCancelledView } from './BookingCancelledView';
+import { StyleSheet } from 'react-native';
 import { ConfirmationBottomSheet } from './ConfirmationBottomSheet';
 
 const useClassCancel = () => {
-  const cancelClass = async (params: { classId: string }): Promise<any> => {
+  const cancelClass = async (params: {
+    classId: string;
+    venueId: string;
+    startDate: string;
+  }): Promise<any> => {
     try {
-      const response = await axiosClient.delete(
-        `/activity/schedules/me/${params.classId}`
-      );
+      const response = await axiosClient.post(`activity/schedules/me/cancel`, {
+        ...params,
+      });
       queryClient.invalidateQueries({
-        queryKey: [QueryKeys.schedulesDataQuerykey],
+        queryKey: [ClassQueryKeys.schedules],
       });
       return response.data;
     } catch (error) {
@@ -49,73 +51,31 @@ interface CancellationConfirmationPanelProps {
 
 export const CancellationConfirmationPanel: React.FC<
   CancellationConfirmationPanelProps
-> = ({
-  visible,
-  onClose,
-  classData,
-  classDetail,
-  onCancellationSuccess,
-  colors,
-}) => {
+> = ({ visible, onClose, classData, onCancellationSuccess, colors }) => {
   const { t } = useTranslation();
   const { cancelMutationFn, isLoading } = useClassCancel();
-  const [showSuccessView, setShowSuccessView] = useState(false);
-
+  
   const handleConfirmCancellation = async () => {
     try {
       await cancelMutationFn.mutateAsync({
         classId: classData.id,
+        venueId: classData.venue?.id || '',
+        startDate: classData.date || '',
       });
 
       queryClient.invalidateQueries({
-        queryKey: [QueryKeys.classDetailsQueryKey, classData.id],
+        queryKey: [ClassQueryKeys.classDetails, classData.id],
       });
 
-      setShowSuccessView(true);
+      // Skip showing our own success view and directly trigger parent success callback
+      if (onCancellationSuccess) {
+        onCancellationSuccess();
+      }
+      onClose();
     } catch (error) {
       console.error('Error cancelling class:', error);
     }
   };
-
-  const handleCloseSuccess = () => {
-    setShowSuccessView(false);
-    if (onCancellationSuccess) {
-      onCancellationSuccess();
-    }
-    onClose();
-  };
-
-  if (showSuccessView) {
-    return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.successModalContent}>
-            <View style={styles.closeButtonContainer}>
-              <TouchableOpacity
-                onPress={handleCloseSuccess}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color="#999" />
-              </TouchableOpacity>
-            </View>
-            <BookingCancelledView
-              colors={{
-                background: colors.background || '#1A1A1A',
-                textPrimary: colors.textPrimary || '#FFFFFF',
-                textSecondary: colors.textSecondary || '#CCCCCC',
-                successColor: '#4CAF50',
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
-    );
-  }
 
   return (
     <ConfirmationBottomSheet

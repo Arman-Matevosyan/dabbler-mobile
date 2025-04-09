@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { usePaymentSubscribe, useVerifyPayment } from '@/hooks/payments';
+import { usePaymentSubscribe, useVerifyPayment } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';

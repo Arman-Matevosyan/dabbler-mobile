@@ -1,10 +1,9 @@
 import ProfilePageSkeleton from '@/components/ui/MainTabsSkeletons/ProfilePageSkeleton';
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { usePaymentMethods } from '@/hooks';
-import { useTheme } from '@/providers/ThemeContext';
+import { usePaymentMethods } from '@/hooks/payment/usePayment';
 import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
-import { PaymentMethod } from '@/types/types';
+import { IPaymentMethod } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,8 +18,7 @@ import {
 
 export default function PaymentScreen() {
   const { styles, colors } = useProfileTabStyles();
-  const { paymentMethods, isLoading } = usePaymentMethods();
-  const { colorScheme } = useTheme();
+  const { data: paymentMethods, isLoading } = usePaymentMethods();
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -31,7 +29,6 @@ export default function PaymentScreen() {
     );
   }
 
-  // Check if there are any payment methods
   const hasPaymentMethods = paymentMethods && paymentMethods.length > 0;
 
   if (!hasPaymentMethods) {
@@ -113,7 +110,7 @@ export default function PaymentScreen() {
         </ThemedText>
 
         <View style={{ gap: 16, marginTop: 24 }}>
-          {paymentMethods.map((method: PaymentMethod, index) => (
+          {paymentMethods.map((method: IPaymentMethod, index: number) => (
             <View
               key={index}
               style={[

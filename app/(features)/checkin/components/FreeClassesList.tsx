@@ -39,21 +39,19 @@ export const FreeClassesList: React.FC<FreeClassesListProps> = ({
   const navigateToClassDetails = (classItem: Class) => {
     router.push({
       pathname: '/classes/details/[id]',
-      params: { id: classItem.id }
+      params: { id: classItem.id },
     });
   };
 
   const renderClassItem = ({ item }: { item: Class }) => {
-    const coverImage = item.covers && item.covers.length > 0
-      ? item.covers[0]?.url
-      : `https://picsum.photos/400/200?random=${item.id}`;
+    const coverImage =
+      item.covers && item.covers.length > 0
+        ? item.covers[0]?.url
+        : `https://picsum.photos/400/200?random=${item.id}`;
 
     return (
       <Pressable
-        style={[
-          styles.classCard,
-          { backgroundColor: colors.background }
-        ]}
+        style={[styles.classCard, { backgroundColor: colors.background }]}
         onPress={() => navigateToClassDetails(item)}
       >
         <View style={styles.imageContainer}>
@@ -61,46 +59,81 @@ export const FreeClassesList: React.FC<FreeClassesListProps> = ({
         </View>
         <View style={styles.detailsContainer}>
           <ThemedText style={styles.className}>{item.name}</ThemedText>
-          
+
           <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={16} color={colors.textSecondary} style={styles.icon} />
-            <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
+            <Ionicons
+              name="time-outline"
+              size={16}
+              color={colors.textSecondary}
+              style={styles.icon}
+            />
+            <ThemedText
+              style={[styles.infoText, { color: colors.textSecondary }]}
+            >
               {item.duration} {t('classes.minutes')}
             </ThemedText>
           </View>
-          
+
           <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={16} color={colors.textSecondary} style={styles.icon} />
-            <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
+            <Ionicons
+              name="person-outline"
+              size={16}
+              color={colors.textSecondary}
+              style={styles.icon}
+            />
+            <ThemedText
+              style={[styles.infoText, { color: colors.textSecondary }]}
+            >
               {item.instructorInfo}
             </ThemedText>
           </View>
-          
+
           {item.venue && item.venue.name && (
             <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={16} color={colors.textSecondary} style={styles.icon} />
-              <ThemedText style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Ionicons
+                name="location-outline"
+                size={16}
+                color={colors.textSecondary}
+                style={styles.icon}
+              />
+              <ThemedText
+                style={[styles.infoText, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
                 {item.venue.name}
               </ThemedText>
             </View>
           )}
-          
+
           <View style={styles.tagsContainer}>
-            {item.categories && item.categories.slice(0, 2).map((category, index) => (
-              <View 
-                key={index} 
-                style={[styles.tagPill, { backgroundColor: colorScheme === 'dark' ? '#333' : '#f0f0f0' }]}
-              >
-                <ThemedText style={[styles.tagText, { color: colors.textSecondary }]}>
-                  {typeof category === 'string' ? category : 'Category'}
-                </ThemedText>
-              </View>
-            ))}
+            {item.categories &&
+              item.categories.slice(0, 2).map((category, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.tagPill,
+                    {
+                      backgroundColor:
+                        colorScheme === 'dark' ? '#333' : '#f0f0f0',
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    style={[styles.tagText, { color: colors.textSecondary }]}
+                  >
+                    {typeof category === 'string' ? category : 'Category'}
+                  </ThemedText>
+                </View>
+              ))}
           </View>
         </View>
-        
+
         <View style={styles.arrowContainer}>
-          <MaterialIcons name="chevron-right" size={24} color={colors.textSecondary} />
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={colors.textSecondary}
+          />
         </View>
       </Pressable>
     );
@@ -188,4 +221,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingRight: 12,
   },
-}); 
+});

@@ -1,22 +1,27 @@
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface SocialLoginButtonsProps {
   containerStyle?: object;
 }
 
-export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({ 
-  containerStyle 
+export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
+  containerStyle,
 }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { handleSocialLogin, socialLoading } = useAuth();
-  
+
   const styles = StyleSheet.create({
     container: {
       flexDirection: 'row',
@@ -42,7 +47,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
       display: 'none',
     },
   });
-  
+
   return (
     <View style={[styles.container, containerStyle]}>
       <TouchableOpacity
@@ -55,9 +60,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
         ) : (
           <>
             <MaterialCommunityIcons name="facebook" size={18} color="white" />
-            <ThemedText style={styles.socialButtonText}>
-              Facebook
-            </ThemedText>
+            <ThemedText style={styles.socialButtonText}>Facebook</ThemedText>
           </>
         )}
       </TouchableOpacity>
@@ -72,12 +75,10 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
         ) : (
           <>
             <MaterialCommunityIcons name="google" size={18} color="white" />
-            <ThemedText style={styles.socialButtonText}>
-              Google
-            </ThemedText>
+            <ThemedText style={styles.socialButtonText}>Google</ThemedText>
           </>
         )}
       </TouchableOpacity>
     </View>
   );
-}; 
+};

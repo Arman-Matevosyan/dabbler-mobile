@@ -1,12 +1,12 @@
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { useUserProfile } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 import { CheckinClassesScreen } from '@/app/(features)/checkin/CheckinClassesScreen';
 import QrCheck from '@/components/svg/QrCheck';
+import { useUser } from '@/hooks';
 import { useCheckIn } from '@/hooks/checkin/useCheckIn';
 import { useTooltip } from '@/hooks/tooltip';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -24,7 +24,7 @@ import {
 const { width, height } = Dimensions.get('window');
 
 export default function CheckinScreen() {
-  const { isAuthenticated } = useUserProfile();
+  const { isAuthenticated } = useUser();
   const { colorScheme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);

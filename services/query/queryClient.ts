@@ -1,4 +1,10 @@
-import { QueryKeys } from '@/constants/QueryKeys';
+import {
+  AuthQueryKeys,
+  ClassQueryKeys,
+  PaymentQueryKeys,
+  UserQueryKeys,
+  VenueQueryKeys,
+} from '@/constants/QueryKeys';
 import { showErrorTooltip } from '@/hooks/tooltip';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 
@@ -40,15 +46,17 @@ export const queryClient = new QueryClient({
 });
 
 export const invalidateAuthDependentQueries = () => {
-  queryClient.invalidateQueries({ queryKey: [QueryKeys.userQueryKey] });
-  queryClient.invalidateQueries({ queryKey: [QueryKeys.favoritesQueryKey] });
+  queryClient.invalidateQueries({ queryKey: [UserQueryKeys.userData] });
+  queryClient.invalidateQueries({ queryKey: [AuthQueryKeys.SESSION] });
+  queryClient.invalidateQueries({ queryKey: [AuthQueryKeys.USER_AVATAR] });
+  queryClient.invalidateQueries({ queryKey: [VenueQueryKeys.favorites] });
   queryClient.invalidateQueries({
-    queryKey: [QueryKeys.schedulesDataQuerykey],
+    queryKey: [ClassQueryKeys.schedules],
   });
   queryClient.invalidateQueries({
-    queryKey: [QueryKeys.paymentMethodsQueryKey],
+    queryKey: [PaymentQueryKeys.paymentMethods],
   });
   queryClient.invalidateQueries({
-    queryKey: [QueryKeys.subscriptionsQueryKey],
+    queryKey: [PaymentQueryKeys.subscriptions],
   });
 };

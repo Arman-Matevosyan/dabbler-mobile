@@ -3,7 +3,7 @@ import { useTheme } from '@/providers/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -50,7 +50,7 @@ const ImageCarousel = ({
       onStartShouldSetPanResponder: () => true,
       onPanResponderRelease: (evt, gestureState) => {
         const { dx } = gestureState;
-        
+
         if (Math.abs(dx) > 50) {
           if (dx > 0 && activeIndex > 0) {
             navigateZoomedImage('prev');
@@ -76,29 +76,30 @@ const ImageCarousel = ({
     onFavoritePress();
   }, [isFavorite, onFavoritePress]);
 
-  const navigateZoomedImage = useCallback((direction: 'next' | 'prev') => {
-    if (direction === 'next' && activeIndex < images.length - 1) {
-      setActiveIndex(prevIndex => prevIndex + 1);
-      try {
-        zoomedFlatListRef.current?.scrollToIndex({
-          index: activeIndex + 1,
-          animated: true,
-          viewPosition: 0.5,
-        });
-      } catch (error) {
+  const navigateZoomedImage = useCallback(
+    (direction: 'next' | 'prev') => {
+      if (direction === 'next' && activeIndex < images.length - 1) {
+        setActiveIndex((prevIndex) => prevIndex + 1);
+        try {
+          zoomedFlatListRef.current?.scrollToIndex({
+            index: activeIndex + 1,
+            animated: true,
+            viewPosition: 0.5,
+          });
+        } catch (error) {}
+      } else if (direction === 'prev' && activeIndex > 0) {
+        setActiveIndex((prevIndex) => prevIndex - 1);
+        try {
+          zoomedFlatListRef.current?.scrollToIndex({
+            index: activeIndex - 1,
+            animated: true,
+            viewPosition: 0.5,
+          });
+        } catch (error) {}
       }
-    } else if (direction === 'prev' && activeIndex > 0) {
-      setActiveIndex(prevIndex => prevIndex - 1);
-      try {
-        zoomedFlatListRef.current?.scrollToIndex({
-          index: activeIndex - 1,
-          animated: true,
-          viewPosition: 0.5,
-        });
-      } catch (error) {
-      }
-    }
-  }, [activeIndex, images.length]);
+    },
+    [activeIndex, images.length]
+  );
 
   useEffect(() => {
     if (zoomedImageVisible && zoomedFlatListRef.current && activeIndex >= 0) {
@@ -110,19 +111,27 @@ const ImageCarousel = ({
             viewPosition: 0.5,
           });
         }, 100);
-      } catch (error) {
-      }
+      } catch (error) {}
     }
   }, [zoomedImageVisible, activeIndex]);
 
-  const handleZoomedScroll = useCallback((event: any) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const currentIndex = Math.round(event.nativeEvent.contentOffset.x / slideSize);
-    
-    if (currentIndex !== activeIndex && currentIndex >= 0 && currentIndex < images.length) {
-      setActiveIndex(currentIndex);
-    }
-  }, [activeIndex, images.length]);
+  const handleZoomedScroll = useCallback(
+    (event: any) => {
+      const slideSize = event.nativeEvent.layoutMeasurement.width;
+      const currentIndex = Math.round(
+        event.nativeEvent.contentOffset.x / slideSize
+      );
+
+      if (
+        currentIndex !== activeIndex &&
+        currentIndex >= 0 &&
+        currentIndex < images.length
+      ) {
+        setActiveIndex(currentIndex);
+      }
+    },
+    [activeIndex, images.length]
+  );
 
   return (
     <View style={styles.carouselContainer}>
@@ -145,17 +154,17 @@ const ImageCarousel = ({
         scrollEventThrottle={16}
         keyExtractor={(item, index) => `image-${index}`}
       />
-      
+
       <View style={styles.imageCounter}>
         <Text style={styles.imageCounterText}>
           {activeIndex + 1}/{images.length}
         </Text>
       </View>
-      
+
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color="white" />
       </TouchableOpacity>
-      
+
       <TouchableOpacity
         style={styles.favoriteButton}
         onPress={handleFavoritePress}
@@ -172,21 +181,21 @@ const ImageCarousel = ({
           />
         )}
       </TouchableOpacity>
-      
+
       <View style={styles.indicatorContainer}>
         {images.map((_: any, index: number) => (
           <View
             key={`dot-${index}`}
             style={[
               styles.indicator,
-              index === activeIndex ? 
-                { width: 20, backgroundColor: colors.accentPrimary } : 
-                { backgroundColor: 'rgba(255, 255, 255, 0.5)' }
+              index === activeIndex
+                ? { width: 20, backgroundColor: colors.accentPrimary }
+                : { backgroundColor: 'rgba(255, 255, 255, 0.5)' },
             ]}
           />
         ))}
       </View>
-      
+
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.7)']}
         style={styles.bottomGradient}
@@ -199,24 +208,24 @@ const ImageCarousel = ({
         onRequestClose={() => setZoomedImageVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => setZoomedImageVisible(false)}
           >
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
-          
+
           {activeIndex > 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.modalNavButton, { left: 16 }]}
               onPress={() => navigateZoomedImage('prev')}
             >
               <Ionicons name="chevron-back" size={30} color="white" />
             </TouchableOpacity>
           )}
-          
+
           {activeIndex < images.length - 1 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.modalNavButton, { right: 16 }]}
               onPress={() => navigateZoomedImage('next')}
             >
@@ -242,13 +251,13 @@ const ImageCarousel = ({
             onScroll={handleZoomedScroll}
             scrollEventThrottle={16}
             renderItem={({ item }) => (
-              <View 
-                style={{ 
-                  width, 
+              <View
+                style={{
+                  width,
                   height: height * 0.8,
-                  justifyContent: 'center', 
-                  alignItems: 'center' 
-                }} 
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
                 {...panResponder.panHandlers}
               >
                 <Image
@@ -260,7 +269,7 @@ const ImageCarousel = ({
             )}
             keyExtractor={(item, index) => `modal-image-${index}`}
           />
-          
+
           <View style={styles.modalImageCounter}>
             <Text style={styles.modalImageCounterText}>
               {activeIndex + 1}/{images.length}
@@ -390,4 +399,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ImageCarousel; 
+export default ImageCarousel;

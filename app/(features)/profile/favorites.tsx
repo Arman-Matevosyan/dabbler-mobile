@@ -2,40 +2,26 @@ import Skeleton from '@/components/ui/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { useFavorites } from '@/hooks/favorites/useFavorites';
 import { useTheme } from '@/providers/ThemeContext';
+import { IVenue } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-// Define the venue interface
-interface Venue {
-  id: string;
-  name: string;
-  address?: {
-    city?: string;
-    district?: string;
-    country?: string;
-  };
-  covers?: Array<{ url: string }>;
-  description?: string;
-  activities?: string[];
-}
-
-// Skeleton loader for the venue card
 const VenueSkeletonItem = () => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
-  
+
   return (
     <View style={[styles.skeletonItem, { backgroundColor: colors.secondary }]}>
       <Skeleton style={styles.skeletonImage} />
@@ -49,75 +35,69 @@ const VenueSkeletonItem = () => {
   );
 };
 
-// Venue card component
-const VenueCard = ({ item }: { item: Venue }) => {
+const VenueCard = ({ item }: { item: IVenue }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
-  
-  // Default image URL if no covers provided
-  const imageUrl = item.covers?.[0]?.url || 
-    'https://i.imgur.com/z9hbLVX.jpg';
-  
-  // Format location string
-  const location = item.address 
+
+  const imageUrl = item.covers?.[0]?.url || 'https://i.imgur.com/z9hbLVX.jpg';
+
+  const location = item.address
     ? `${item.address.city || ''} - ${item.address.district || ''}`
     : '';
-    
-  // Get activities or use default text
-  // In your data, activities aren't present, so let's create some fake ones based on the venue name
-  // In a real app, you'd use the actual activities from the API
-  const getActivities = () => {
-    const defaultActivities = [
-      'Fitness', 'Pilates', 'Yoga', 'Indoor Cycling', 'Functional Training',
-      'Boxing', 'Swimming', 'Mixed Martial Arts', 'Dance', 'Meditation'
-    ];
-    
-    // Generate 3-5 random activities
-    const count = Math.floor(Math.random() * 3) + 3;
-    const shuffled = [...defaultActivities].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
-  };
-  
-  const activities = item.activities || getActivities();
+
+  const categoriesText = (item as any).categories 
+    ? Array.isArray((item as any).categories) 
+      ? (item as any).categories.join(', ') 
+      : ''
+    : '';
 
   const handlePress = () => {
     router.push({
       pathname: '/venues/[id]',
-      params: { id: item.id }
+      params: { id: item.id },
     });
   };
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.venueCard, { backgroundColor: colors.secondary }]}
       activeOpacity={0.7}
       onPress={handlePress}
     >
-      <Image 
-        source={{ uri: imageUrl }} 
+      <Image
+        source={{ uri: imageUrl }}
         style={styles.venueImage}
         resizeMode="cover"
       />
-      
+
       <View style={styles.venueDetails}>
         <Text style={[styles.venueName, { color: colors.textPrimary }]}>
           {item.name}
         </Text>
-        
+
         <View style={styles.locationContainer}>
-          <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+          <Ionicons
+            name="location-outline"
+            size={14}
+            color={colors.textSecondary}
+          />
           <Text style={[styles.locationText, { color: colors.textSecondary }]}>
             {location}
           </Text>
         </View>
-        
+
         <View style={styles.tagsContainer}>
-          <Ionicons name="pricetag-outline" size={14} color={colors.textSecondary} style={styles.tagIcon} />
-          <Text 
+          <Ionicons
+            name="pricetag-outline"
+            size={14}
+            color={colors.textSecondary}
+            style={styles.tagIcon}
+          />
+          <Text
             style={[styles.tagsText, { color: colors.textSecondary }]}
             numberOfLines={2}
           >
-            {activities.join(', ')}
+            {categoriesText}
           </Text>
         </View>
       </View>
@@ -130,28 +110,29 @@ export default function FavoritesScreen() {
   const colors = Colors[colorScheme || 'dark'];
   const { favorites, isLoading } = useFavorites();
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Filter favorites based on search query
-  const filteredFavorites = searchQuery 
-    ? favorites.filter(venue => 
-        venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venue.address?.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        venue.address?.district?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredFavorites = searchQuery
+    ? favorites.filter(
+        (venue) =>
+          venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          venue.address?.city
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          venue.address?.district
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase())
       )
     : favorites;
-  
-  // Render loading skeleton
+
   const renderSkeletons = () => {
     return (
       <Animated.View entering={FadeIn}>
-        {[1, 2, 3, 4, 5].map(key => (
+        {[1, 2, 3, 4, 5].map((key) => (
           <VenueSkeletonItem key={key} />
         ))}
       </Animated.View>
     );
   };
-  
-  // Render empty state
+
   const renderEmptyState = () => {
     return (
       <View style={styles.emptyStateContainer}>
@@ -159,47 +140,52 @@ export default function FavoritesScreen() {
         <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
           No favorite venues found
         </Text>
-        <Text style={[styles.emptyStateSubtext, { color: colors.textTertiary }]}>
+        <Text
+          style={[styles.emptyStateSubtext, { color: colors.textTertiary }]}
+        >
           Add venues to your favorites to see them here
         </Text>
       </View>
     );
   };
-  
-  // Back button handler
+
   const handleBackPress = () => {
     router.back();
   };
-  
-  // Render each item in the list
-  const renderItem = useCallback(({ item }: { item: Venue }) => (
-    <VenueCard item={item} />
-  ), [colorScheme]);
-  
+
+  const renderItem = useCallback(
+    ({ item }: { item: IVenue }) => <VenueCard item={item} />,
+    [colorScheme]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.primary }]}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      
-      <Stack.Screen options={{ 
-        headerShown: false,
-      }} />
-      
-      {/* Header */}
+
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleBackPress}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
           Favorites
         </Text>
       </View>
-      
-      {/* Search bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.secondary }]}>
-        <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+
+      <View
+        style={[styles.searchContainer, { backgroundColor: colors.secondary }]}
+      >
+        <Ionicons
+          name="search"
+          size={20}
+          color={colors.textSecondary}
+          style={styles.searchIcon}
+        />
         <TextInput
           placeholder="Search"
           placeholderTextColor={colors.textSecondary}
@@ -208,15 +194,14 @@ export default function FavoritesScreen() {
           onChangeText={setSearchQuery}
         />
       </View>
-      
-      {/* Venues list */}
+
       {isLoading ? (
         renderSkeletons()
       ) : (
         <FlatList
           data={filteredFavorites}
           renderItem={renderItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyState}
@@ -332,5 +317,5 @@ const styles = StyleSheet.create({
   },
   skeletonContent: {
     padding: 16,
-  }
+  },
 });

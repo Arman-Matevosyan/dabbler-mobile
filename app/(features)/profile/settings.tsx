@@ -1,7 +1,7 @@
 import ProfilePageSkeleton from '@/components/ui/MainTabsSkeletons/ProfilePageSkeleton';
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';

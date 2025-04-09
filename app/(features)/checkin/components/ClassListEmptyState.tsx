@@ -10,7 +10,9 @@ interface ClassListEmptyStateProps {
   type: 'free' | 'scheduled';
 }
 
-export const ClassListEmptyState: React.FC<ClassListEmptyStateProps> = ({ type }) => {
+export const ClassListEmptyState: React.FC<ClassListEmptyStateProps> = ({
+  type,
+}) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
@@ -19,12 +21,12 @@ export const ClassListEmptyState: React.FC<ClassListEmptyStateProps> = ({ type }
     if (type === 'free') {
       return {
         title: t('classes.noAvailableClasses'),
-        description: t('checkin.noAvailableClassesDescription')
+        description: t('checkin.noAvailableClassesDescription'),
       };
     } else {
       return {
         title: t('classes.noScheduledClasses'),
-        description: t('checkin.noScheduledClassesDescription')
+        description: t('checkin.noScheduledClassesDescription'),
       };
     }
   };
@@ -34,7 +36,9 @@ export const ClassListEmptyState: React.FC<ClassListEmptyStateProps> = ({ type }
   return (
     <View style={styles.container}>
       <MaterialCommunityIcons
-        name={type === 'free' ? 'calendar-text-outline' : 'calendar-check-outline'}
+        name={
+          type === 'free' ? 'calendar-text-outline' : 'calendar-check-outline'
+        }
         size={80}
         color={colors.textSecondary}
       />
@@ -66,4 +70,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-}); 
+});

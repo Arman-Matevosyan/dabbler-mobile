@@ -40,18 +40,19 @@ export const ScheduledClassesList: React.FC<ScheduledClassesListProps> = ({
   const navigateToClassDetails = (classItem: Class) => {
     router.push({
       pathname: '/classes/details/[id]',
-      params: { id: classItem.id, date: classItem.date || undefined }
+      params: { id: classItem.id, date: classItem.date || undefined },
     });
   };
 
   const renderClassItem = ({ item }: { item: Class }) => {
-    const coverImage = item.covers && item.covers.length > 0
-      ? item.covers[0]?.url
-      : `https://picsum.photos/400/200?random=${item.id}`;
-      
+    const coverImage =
+      item.covers && item.covers.length > 0
+        ? item.covers[0]?.url
+        : `https://picsum.photos/400/200?random=${item.id}`;
+
     let formattedDate = '';
     let formattedTime = '';
-    
+
     if (item.date) {
       try {
         const date = parseISO(item.date);
@@ -62,14 +63,11 @@ export const ScheduledClassesList: React.FC<ScheduledClassesListProps> = ({
       }
     }
 
-    const isNoShow = Math.random() < 0.3; 
+    const isNoShow = Math.random() < 0.3;
 
     return (
       <Pressable
-        style={[
-          styles.classCard,
-          { backgroundColor: colors.background }
-        ]}
+        style={[styles.classCard, { backgroundColor: colors.background }]}
         onPress={() => navigateToClassDetails(item)}
       >
         <View style={styles.imageContainer}>
@@ -77,44 +75,72 @@ export const ScheduledClassesList: React.FC<ScheduledClassesListProps> = ({
         </View>
         <View style={styles.detailsContainer}>
           <ThemedText style={styles.className}>{item.name}</ThemedText>
-          
+
           {formattedDate && formattedTime && (
             <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} style={styles.icon} />
-              <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={colors.textSecondary}
+                style={styles.icon}
+              />
+              <ThemedText
+                style={[styles.infoText, { color: colors.textSecondary }]}
+              >
                 {formattedDate} - {formattedTime}
               </ThemedText>
             </View>
           )}
-          
+
           {item.venue && item.venue.name && (
             <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={16} color={colors.textSecondary} style={styles.icon} />
-              <ThemedText style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Ionicons
+                name="location-outline"
+                size={16}
+                color={colors.textSecondary}
+                style={styles.icon}
+              />
+              <ThemedText
+                style={[styles.infoText, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
                 {item.venue.name}
               </ThemedText>
             </View>
           )}
-          
+
           <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={16} color={colors.textSecondary} style={styles.icon} />
-            <ThemedText style={[styles.infoText, { color: colors.textSecondary }]}>
+            <Ionicons
+              name="person-outline"
+              size={16}
+              color={colors.textSecondary}
+              style={styles.icon}
+            />
+            <ThemedText
+              style={[styles.infoText, { color: colors.textSecondary }]}
+            >
               {item.instructorInfo}
             </ThemedText>
           </View>
-          
+
           {isNoShow && (
             <View style={styles.noShowContainer}>
-              <View style={[styles.noShowIndicator, { backgroundColor: '#FF6B6B' }]} />
+              <View
+                style={[styles.noShowIndicator, { backgroundColor: '#FF6B6B' }]}
+              />
               <ThemedText style={[styles.noShowText, { color: '#FF6B6B' }]}>
                 {t('checkin.noShow')}
               </ThemedText>
             </View>
           )}
         </View>
-        
+
         <View style={styles.arrowContainer}>
-          <MaterialIcons name="chevron-right" size={24} color={colors.textSecondary} />
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={colors.textSecondary}
+          />
         </View>
       </Pressable>
     );
@@ -201,4 +227,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingRight: 12,
   },
-}); 
+});

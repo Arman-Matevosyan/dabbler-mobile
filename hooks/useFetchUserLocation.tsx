@@ -8,8 +8,8 @@ interface Coordinates {
 
 // Default location centered on Armenia (Yerevan)
 const DEFAULT_LOCATION: Coordinates = {
-  latitude: 40.179,  // Yerevan, Armenia
-  longitude: 44.499, // Yerevan, Armenia
+  latitude: 40.179,
+  longitude: 44.499,
 };
 
 const useFetchUserLocation = () => {
@@ -37,17 +37,14 @@ const useFetchUserLocation = () => {
         }
         return newCoords;
       });
-    } catch (error) {
-      // Fall back to Armenia if location fetch fails
-      console.log('Location error, using default Armenia location');
-    }
+    } catch (error) {}
   }, []);
 
   const userLocation = useMemo(
     () => ({
       ...coordinates,
-      latitudeDelta: 1.5,  // Zoom level to show more of Armenia
-      longitudeDelta: 1.5, // Adjusted for aspect ratio
+      latitudeDelta: 1.5,
+      longitudeDelta: 1.5,
     }),
     [coordinates.latitude, coordinates.longitude]
   );

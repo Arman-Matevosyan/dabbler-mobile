@@ -1,7 +1,7 @@
 import Skeleton from '@/components/ui/Skeleton';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { TouchableOpacity, View } from 'react-native';
 
 interface ActionButtonsProps {
   colors: any;
@@ -59,7 +59,11 @@ export const ActionButtons = ({
         style={profileStyles.actionButton}
         onPress={() => onNavigate('favorites')}
       >
-        <MaterialCommunityIcons name="heart-outline" size={24} color={colors.accentPrimary} />
+        <MaterialCommunityIcons
+          name="heart-outline"
+          size={24}
+          color={colors.accentPrimary}
+        />
         <ThemedText style={profileStyles.actionButtonText}>
           Favorites
         </ThemedText>
@@ -69,7 +73,11 @@ export const ActionButtons = ({
         style={profileStyles.actionButton}
         onPress={() => onNavigate('checkin')}
       >
-        <MaterialCommunityIcons name="check-outline" size={24} color={colors.accentPrimary} />
+        <MaterialCommunityIcons
+          name="check-outline"
+          size={24}
+          color={colors.accentPrimary}
+        />
         <ThemedText style={profileStyles.actionButtonText}>Check-in</ThemedText>
       </TouchableOpacity>
     </View>

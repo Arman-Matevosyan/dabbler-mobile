@@ -5,8 +5,13 @@
     "scheme": "dabbler",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/IconLogo.png",
+    "icon": "./assets/images/Artboard.png",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/rounded_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#191E24"
+    },
     "newArchEnabled": true,
     "runtimeVersion": {
       "policy": "appVersion"
@@ -35,6 +40,8 @@
         "NSLocationWhenInUseUsageDescription": "This app uses location services to find nearby venues.",
         "NSLocationAlwaysUsageDescription": "This app uses location services to provide notifications about venues you are close to.",
         "NSPhotoLibraryUsageDescription": "Allow access to photos to upload profile pictures",
+        "NSCalendarsUsageDescription": "This app needs access to your calendar to add class bookings",
+        "NSRemindersUsageDescription": "This app needs access to your reminders to set alerts for upcoming classes",
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": ["dabbler"]
@@ -47,8 +54,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/IconLogo.png",
-        "backgroundColor": "#191e24"
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#3B82F6"
       },
       "config": {
         "googleMaps": {
@@ -98,7 +105,9 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "INTERNET"
+        "INTERNET",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
       ]
     },
     "web": {
@@ -110,17 +119,24 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/Artboard.png",
-          "imageWidth": 200,
-          "imageHeight": 200,
+          "image": "./assets/images/rounded_logo.png",
+          "imageWidth": 320,
+          "imageHeight": 320,
           "resizeMode": "contain",
-          "backgroundColor": "#191e24"
+          "backgroundColor": "#191E24"
         }
       ],
       [
         "expo-image-picker",
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Dabbler to access your calendar",
+          "remindersPermission": "Allow Dabbler to access your reminders"
         }
       ],
       "expo-secure-store"

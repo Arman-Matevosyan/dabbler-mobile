@@ -15,10 +15,7 @@ export const loginSchema = z.object({
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Invalid email address'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
 });
 
 export const signupSchema = z

@@ -1,24 +1,24 @@
 import Skeleton from '@/components/ui/Skeleton';
 import { Colors } from '@/constants/Colors';
 import { useTooltip } from '@/contexts/TooltipContext';
+import { useVenuesBottomSheet } from '@/hooks/content';
 import { useFavorites } from '@/hooks/favorites/useFavorites';
-import { useUserProfile } from '@/hooks/profile/useUserProfile';
-import { useVenuesBottomSheet } from '@/hooks/venues/useVenuesBottomSheet';
+import { useUser } from '@/hooks/user';
 import { useTheme } from '@/providers/ThemeContext';
-import { Venue } from '@/types/types';
+import { Venue } from '@/types/enums';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomSheet, {
-    BottomSheetFlatList,
-    BottomSheetScrollView,
+  BottomSheetFlatList,
+  BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { useIsFocused } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -117,7 +117,7 @@ const FavoriteButton = React.memo(({ venue }: FavoriteButtonProps) => {
   const colors = Colors[colorScheme];
   const { favorites, toggleFavorite } = useFavorites();
   const { showTooltip } = useTooltip();
-  const { isAuthenticated } = useUserProfile();
+  const { isAuthenticated } = useUser();
   const { t } = useTranslation();
 
   const isFavorite = useMemo(
@@ -135,9 +135,7 @@ const FavoriteButton = React.memo(({ venue }: FavoriteButtonProps) => {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.favoriteButton,
-      ]}
+      style={[styles.favoriteButton]}
       onPress={handlePress}
       activeOpacity={0.6}
     >
@@ -182,7 +180,8 @@ const VenueCard = React.memo(
     }, [item.covers]);
 
     const categoryText = useMemo(() => {
-      if (!item.categories || item.categories.length === 0) return t('venues.fitness');
+      if (!item.categories || item.categories.length === 0)
+        return t('venues.fitness');
       return item.categories.map((c) => c.name).join(', ');
     }, [item.categories, t]);
 
@@ -372,7 +371,6 @@ const BottomSheetContent = React.memo(
     const isFocused = useIsFocused();
     const { data, isLoading } = useVenuesBottomSheet(searchParams, isFocused);
     const { t } = useTranslation();
-    console.log(data);
 
     const renderVenueItem = useCallback(
       ({ item }: { item: ExtendedVenue }) => (

@@ -1,4 +1,4 @@
-export interface UserProfile {
+export interface IUserProfile {
   userId?: string;
   firstName?: string;
   lastName?: string;

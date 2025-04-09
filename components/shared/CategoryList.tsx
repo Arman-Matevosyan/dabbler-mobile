@@ -3,20 +3,20 @@ import { useCategories } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-    BottomSheetBackdrop,
-    BottomSheetModal,
-    BottomSheetScrollView,
-    BottomSheetView,
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface Category {
@@ -83,15 +83,19 @@ export const CategoryList = ({
       // Reset state when opening
       setLocalSelectedCategories(initialSelectedCategories);
       setCategorySearchValue('');
-      
+
       // Focus the search input after a delay
       if (hasBeenVisible.current) {
         setTimeout(() => searchInputRef.current?.focus(), 200);
       }
-      
+
       // Reset manual dismiss flag when opening
       isManualDismiss.current = false;
-    } else if (isSheetReady && hasBeenVisible.current && isManualDismiss.current) {
+    } else if (
+      isSheetReady &&
+      hasBeenVisible.current &&
+      isManualDismiss.current
+    ) {
       // Only dismiss if it was a manual action and the sheet has been visible before
       bottomSheetRef.current?.dismiss();
     }
@@ -136,7 +140,9 @@ export const CategoryList = ({
   const handleSelectAll = () => {
     if (!categories) return;
     setLocalSelectedCategories((prev) =>
-      prev.length === categories.length ? [] : categories.map((cat: Category) => cat.name)
+      prev.length === categories.length
+        ? []
+        : categories.map((cat: Category) => cat.name)
     );
   };
 

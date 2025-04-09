@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 export default function ClassesRedirect() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  
+
   useEffect(() => {
     if (params.id) {
       router.replace({
@@ -18,4 +18,4 @@ export default function ClassesRedirect() {
   }, [params, router]);
 
   return null;
-} 
+}

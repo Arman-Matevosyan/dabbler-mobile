@@ -1,5 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/providers/ThemeContext';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -13,7 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface AvatarProps {
   imageUri?: string | null;

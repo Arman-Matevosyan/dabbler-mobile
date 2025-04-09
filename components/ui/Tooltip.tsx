@@ -34,19 +34,16 @@ export function Tooltip({
   style,
   onClose,
 }: TooltipProps) {
-  // Animation values
   const translateY = useRef(
     new Animated.Value(position === 'top' ? -100 : 100)
   ).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
-  // State to track visibility
   const [isVisible, setIsVisible] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // Get theme colors for styling
   const background = useThemeColor({}, 'background');
   const secondary = useThemeColor({}, 'secondary');
   const textPrimary = useThemeColor({}, 'textPrimary');

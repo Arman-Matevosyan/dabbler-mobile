@@ -1,12 +1,12 @@
 import Avatar from '@/components/profile/Avatar';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useProfileTabStyles } from '@/styles/ProfileTabStyles';
-import { UserProfile } from '@/types/user';
+import { IUserProfile } from '@/types/user';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface UserInfoCardProps {
-  user: UserProfile | null;
+  user: IUserProfile;
   handleAvatarUpload: () => Promise<void>;
   isAvatarUploadLoading: boolean;
 }

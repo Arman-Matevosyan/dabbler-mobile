@@ -1,5 +1,3 @@
-import useFavorites from './useFavorites';
+export * from './favorites.interfaces';
+export { useFavorites } from './useFavorites';
 
-export { useFavorites };
-
-export default useFavorites;

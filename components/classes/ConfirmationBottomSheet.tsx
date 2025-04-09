@@ -1,17 +1,20 @@
-import { ClassDetailResponse } from '@/hooks/classes/useClassDetails';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import type { ClassDetailResponse } from '@/hooks/content/useClasses';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { format } from 'date-fns';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+
+const { width } = Dimensions.get('window');
 
 export interface ConfirmationBottomSheetProps {
   visible: boolean;
@@ -26,7 +29,9 @@ export interface ConfirmationBottomSheetProps {
   classData?: ClassDetailResponse;
 }
 
-export const ConfirmationBottomSheet: React.FC<ConfirmationBottomSheetProps> = ({
+export const ConfirmationBottomSheet: React.FC<
+  ConfirmationBottomSheetProps
+> = ({
   visible,
   onClose,
   onConfirm,
@@ -39,39 +44,82 @@ export const ConfirmationBottomSheet: React.FC<ConfirmationBottomSheetProps> = (
   classData,
 }) => {
   const { t } = useTranslation();
-  
+
   // Format class info if provided
   let classInfo = null;
   if (classData && classData.date) {
-    const classDate = new Date(classData.date);
-    const formattedDate = classDate.toLocaleDateString('en-US', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-    const formattedTime = classDate.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    
-    classInfo = (
-      <View style={styles.classInfoContainer}>
-        <Text style={styles.className}>{classData.name}</Text>
-        <View style={styles.classDetailsRow}>
-          <Ionicons name="calendar-outline" size={16} color="#999" style={styles.classIcon} />
-          <Text style={styles.classDetail}>{formattedDate}</Text>
-          <Ionicons name="time-outline" size={16} color="#999" style={[styles.classIcon, {marginLeft: 16}]} />
-          <Text style={styles.classDetail}>{formattedTime}</Text>
-        </View>
-        {classData.venue && (
+    try {
+      const classDate = new Date(classData.date);
+      const formattedDate = format(classDate, 'EEE, dd MMM');
+      const formattedTime = format(classDate, 'HH:mm');
+
+      let endTime = '';
+      if (classData.duration) {
+        const endDateTime = new Date(
+          classDate.getTime() + classData.duration * 60000
+        );
+        endTime = format(endDateTime, 'HH:mm');
+      }
+
+      const timeDisplay = endTime
+        ? `${formattedTime} - ${endTime}`
+        : formattedTime;
+
+      classInfo = (
+        <View style={styles.classInfoContainer}>
+          <Text style={styles.className}>{classData.name}</Text>
           <View style={styles.classDetailsRow}>
-            <Ionicons name="location-outline" size={16} color="#999" style={styles.classIcon} />
-            <Text style={styles.classDetail}>{classData.venue.name}</Text>
+            <MaterialCommunityIcons
+              name="calendar-clock"
+              size={18}
+              color="#CCC"
+              style={styles.classIcon}
+            />
+            <Text style={styles.classDetail}>
+              {formattedDate} • {timeDisplay}
+            </Text>
           </View>
-        )}
-      </View>
-    );
+          {classData.venue && (
+            <View style={styles.classDetailsRow}>
+              <Ionicons
+                name="location-outline"
+                size={18}
+                color="#CCC"
+                style={styles.classIcon}
+              />
+              <Text style={styles.classDetail}>{classData.venue.name}</Text>
+            </View>
+          )}
+
+          <View style={styles.classPriceContainer}>
+            <Text
+              style={[
+                styles.priceLabel,
+                isDestructive ? styles.destructiveText : {},
+              ]}
+            >
+              {isDestructive
+                ? t('classes.cancellationFee', 'Cancellation Fee:')
+                : t('classes.price', 'Price:')}
+            </Text>
+            <Text
+              style={[
+                styles.priceValue,
+                isDestructive ? styles.destructiveText : {},
+              ]}
+            >
+              {
+                (classData as any).price
+                  ? `$${(classData as any).price}`
+                  : t('classes.free', 'Free') // Translates to "Անվճար" in Armenian
+              }
+            </Text>
+          </View>
+        </View>
+      );
+    } catch (error) {
+      console.error('Error formatting date:', error);
+    }
   }
 
   if (!visible) return null;
@@ -80,67 +128,70 @@ export const ConfirmationBottomSheet: React.FC<ConfirmationBottomSheetProps> = (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="slide"
       statusBarTranslucent
+      onRequestClose={onClose}
     >
-      <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={onClose}
-        >
-          <View style={styles.contentContainer}>
-            <View 
-              style={[
-                styles.sheetContainer, 
-                isDestructive ? styles.destructiveContainer : {}
-              ]}
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.contentContainer}>
+          <View
+            style={[
+              styles.sheetContainer,
+              isDestructive ? styles.destructiveContainer : {},
+            ]}
+          >
+            <View style={styles.handleContainer}>
+              <View style={styles.handle} />
+            </View>
+
+            <View style={styles.header}>
+              <Text style={styles.title}>{title}</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={onClose}
+                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+              >
+                <Ionicons name="close" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.content}
+              showsVerticalScrollIndicator={false}
             >
-              <View style={styles.handleContainer}>
-                <View style={styles.handle} />
-              </View>
-              
-              <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                  <Ionicons name="close" size={24} color="#999" />
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView style={styles.content}>
-                {classInfo}
-                <Text style={styles.message}>{message}</Text>
-              </ScrollView>
-              
-              <View style={styles.actions}>
-                <TouchableOpacity 
-                  style={[styles.button, styles.cancelButton]} 
-                  onPress={onClose}
-                >
-                  <Text style={styles.cancelButtonText}>{cancelText}</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.button, 
-                    styles.confirmButton,
-                    isDestructive ? styles.destructiveButton : {},
-                    isLoading ? styles.disabledButton : {}
-                  ]} 
-                  onPress={onConfirm}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Text style={styles.confirmButtonText}>{confirmText}</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+              {classInfo}
+              <Text style={styles.message}>{message}</Text>
+            </ScrollView>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.confirmButton,
+                  isDestructive ? styles.destructiveButton : {},
+                  isLoading ? styles.disabledButton : {},
+                ]}
+                onPress={onConfirm}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>{confirmText}</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
-      </BlurView>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -151,15 +202,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   contentContainer: {
-    flex: 1,
+    width: '100%',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
     backgroundColor: '#1A1A1A',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: 24,
-    maxHeight: '80%',
+    paddingBottom: 32,
+    maxHeight: '85%',
   },
   destructiveContainer: {
     borderTopColor: '#FF3B30',
@@ -183,16 +234,17 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#FFF',
   },
   closeButton: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   content: {
     paddingHorizontal: 20,
@@ -200,7 +252,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 24,
     color: '#CCC',
     marginBottom: 24,
   },
@@ -212,18 +264,18 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    marginRight: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginRight: 10,
   },
   confirmButton: {
     backgroundColor: '#3B82F6',
-    marginLeft: 8,
+    marginLeft: 10,
   },
   destructiveButton: {
     backgroundColor: '#FF3B30',
@@ -233,36 +285,61 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
   confirmButtonText: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
   classInfoContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
     padding: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   className: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFF',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   classDetailsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   classIcon: {
-    marginRight: 6,
+    marginRight: 8,
   },
   classDetail: {
-    fontSize: 14,
+    fontSize: 15,
+    color: '#CCC',
+    flex: 1,
+  },
+  classPriceContainer: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  priceLabel: {
+    fontSize: 15,
+    fontWeight: '500',
     color: '#CCC',
   },
-}); 
+  priceValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  destructiveText: {
+    color: '#FF3B30',
+  },
+});

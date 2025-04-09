@@ -1,4 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -7,15 +8,9 @@ import {
   Share,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
+  TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInDown,
-  SlideOutDown,
-} from 'react-native-reanimated';
 
 interface BookingStatusBottomSheetProps {
   visible: boolean;
@@ -27,6 +22,7 @@ interface BookingStatusBottomSheetProps {
     successColor: string;
     buttonColor?: string;
     backdropColor?: string;
+    errorColor?: string;
   };
   type: 'success' | 'cancelled';
   classData?: {
@@ -39,7 +35,7 @@ interface BookingStatusBottomSheetProps {
   onAddToCalendar?: () => void;
 }
 
-const { height } = Dimensions.get('window');
+const { height, width } = Dimensions.get('window');
 
 export const BookingStatusBottomSheet = ({
   visible,
@@ -54,11 +50,22 @@ export const BookingStatusBottomSheet = ({
   const handleShare = async () => {
     if (!classData) return;
 
+    // Format date nicely if available
+    let formattedDate = classData.date || '';
+    try {
+      if (classData.date) {
+        const dateObj = new Date(classData.date);
+        formattedDate = format(dateObj, 'EEE, dd MMM yyyy, HH:mm');
+      }
+    } catch (e) {
+      console.error('Error formatting date:', e);
+    }
+
     try {
       await Share.share({
         message: `Join me for ${classData.name || 'a class'} at ${
           classData.venue?.name || ''
-        } on ${classData.date || ''}!`,
+        } on ${formattedDate}!`,
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -71,38 +78,39 @@ export const BookingStatusBottomSheet = ({
     <Modal
       transparent
       visible={visible}
-      animationType="none"
+      animationType="slide"
       onRequestClose={onClose}
       statusBarTranslucent
     >
       <View style={styles.overlay}>
-        <TouchableWithoutFeedback onPress={onClose}>
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(200)}
-            style={[
-              styles.backdrop,
-              { backgroundColor: colors.backdropColor || 'rgba(0,0,0,0.5)' },
-            ]}
-          />
-        </TouchableWithoutFeedback>
+        <TouchableOpacity onPress={onClose} style={StyleSheet.absoluteFill} />
 
-        <Animated.View
-          entering={SlideInDown.duration(300)}
-          exiting={SlideOutDown.duration(200)}
+        <View
           style={[styles.bottomSheet, { backgroundColor: colors.background }]}
         >
-          <View style={styles.handle} />
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
 
           <View style={styles.contentContainer}>
+            {/* Icon and status */}
             <View style={styles.successSection}>
               <View
                 style={[
                   styles.iconContainer,
-                  { backgroundColor: colors.successColor },
+                  {
+                    backgroundColor:
+                      type === 'success'
+                        ? colors.successColor
+                        : colors.errorColor || '#FF3B30',
+                  },
                 ]}
               >
-                <Ionicons name="checkmark" size={40} color="white" />
+                {type === 'success' ? (
+                  <Ionicons name="checkmark" size={20} color="white" />
+                ) : (
+                  <FontAwesome5 name="calendar-times" size={16} color="white" />
+                )}
               </View>
 
               <Text style={[styles.title, { color: colors.textPrimary }]}>
@@ -115,78 +123,46 @@ export const BookingStatusBottomSheet = ({
                 {type === 'success'
                   ? t(
                       'classes.bookingSuccessMessage',
-                      "We can't wait to see you! Keep track of your complete schedule on the profile screen."
+                      "See you soon! Please check the venue or class details to ensure you're fully prepared for the session."
                     )
                   : t(
                       'classes.cancellationSuccessMessage',
-                      "Confirmation: You've successfully canceled this class."
+                      'Your booking has been successfully cancelled.'
                     )}
               </Text>
-
-              {type === 'success' && (
-                <Text
-                  style={[styles.subMessage, { color: colors.textSecondary }]}
-                >
-                  {t(
-                    'classes.calendarMessage',
-                    "Don't forget to add this booking to your calendar app for perfect organization. See you soon!"
-                  )}
-                </Text>
-              )}
-
-              {type === 'cancelled' && (
-                <Text
-                  style={[styles.subMessage, { color: colors.textSecondary }]}
-                >
-                  {t(
-                    'classes.classReinstatementMessage',
-                    "The good news: We've reinstated one of your check-ins! We look forward to welcoming you to another exciting session soon!"
-                  )}
-                </Text>
-              )}
             </View>
 
             <View style={styles.buttonsContainer}>
               {type === 'success' && (
-                <>
-                  <Pressable
-                    style={[
-                      styles.primaryButton,
-                      { backgroundColor: colors.buttonColor || '#3B82F6' },
-                    ]}
-                    android_ripple={{ color: 'transparent' }}
-                    onPress={onAddToCalendar}
-                  >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={20}
-                      color="white"
-                      style={styles.buttonIcon}
-                    />
-                    <Text style={styles.primaryButtonText}>
-                      {t('classes.addToCalendar', 'Add to Calendar')}
-                    </Text>
-                  </Pressable>
+                <Pressable
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: colors.buttonColor || '#3B82F6' },
+                  ]}
+                  onPress={onAddToCalendar}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {t('classes.addToCalendar', 'Add to Calendar')}
+                  </Text>
+                </Pressable>
+              )}
 
-                  <Pressable
-                    style={styles.secondaryButton}
-                    android_ripple={{ color: 'transparent' }}
-                    onPress={handleShare}
-                  >
-                    <Text
-                      style={[
-                        styles.secondaryButtonText,
-                        { color: colors.buttonColor || '#3B82F6' },
-                      ]}
-                    >
-                      {t('classes.shareWithFriends', 'Share with Friends')}
-                    </Text>
-                  </Pressable>
-                </>
+              {type === 'cancelled' && (
+                <Pressable
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: colors.buttonColor || '#3B82F6' },
+                  ]}
+                  onPress={onClose}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {t('common.close', 'Close')}
+                  </Text>
+                </Pressable>
               )}
             </View>
           </View>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -198,53 +174,54 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     zIndex: 1000,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1001,
-  },
   bottomSheet: {
-    height: 380,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    height: 270,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     paddingBottom: 20,
     zIndex: 1002,
   },
+  handleContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    width: '100%',
+  },
   handle: {
-    width: 40,
-    height: 5,
+    width: 32,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: 'rgba(150, 150, 150, 0.3)',
-    borderRadius: 3,
     alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 8,
+    marginBottom: 8,
   },
   contentContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
   },
   successSection: {
     alignItems: 'center',
-    paddingTop: 16,
+    paddingTop: 8,
   },
   iconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: 'center',
   },
   message: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
     marginBottom: 8,
   },
   subMessage: {
@@ -255,21 +232,19 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   buttonsContainer: {
-    marginTop: 20,
     paddingBottom: 16,
   },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 8,
-    marginBottom: 12,
   },
   primaryButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
   },
   buttonIcon: {
     marginRight: 8,
@@ -284,6 +259,6 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

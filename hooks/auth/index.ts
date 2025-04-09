@@ -4,3 +4,5 @@ import { useSignupForm } from './useSignupForm';
 
 export { useForgotPasswordForm, useLoginForm, useSignupForm };
 
+    export * from './useAuth';
+

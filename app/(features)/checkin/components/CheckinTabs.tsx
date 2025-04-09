@@ -16,7 +16,7 @@ export const CheckinTabs: React.FC<CheckinTabsProps> = ({
   activeTab,
   onChangeTab,
   freeClassesCount,
-  scheduledClassesCount
+  scheduledClassesCount,
 }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
@@ -28,42 +28,61 @@ export const CheckinTabs: React.FC<CheckinTabsProps> = ({
         <Pressable
           style={styles.tab}
           onPress={() => onChangeTab('free')}
-          android_ripple={{color: 'transparent'}}
-          pressRetentionOffset={{top: 10, left: 10, bottom: 10, right: 10}}
+          android_ripple={{ color: 'transparent' }}
+          pressRetentionOffset={{ top: 10, left: 10, bottom: 10, right: 10 }}
         >
-          <ThemedText 
+          <ThemedText
             style={[
-              styles.tabText, 
-              { color: activeTab === 'free' ? colors.tint : colors.textSecondary }
+              styles.tabText,
+              {
+                color:
+                  activeTab === 'free' ? colors.tint : colors.textSecondary,
+              },
             ]}
           >
-            {t('classes.availableClasses')} {freeClassesCount > 0 && `(${freeClassesCount})`}
+            {t('classes.availableClasses')}{' '}
+            {freeClassesCount > 0 && `(${freeClassesCount})`}
           </ThemedText>
           {activeTab === 'free' && (
-            <View style={[styles.indicator, { backgroundColor: colors.tint }]} />
+            <View
+              style={[styles.indicator, { backgroundColor: colors.tint }]}
+            />
           )}
         </Pressable>
-        
+
         <Pressable
           style={styles.tab}
           onPress={() => onChangeTab('scheduled')}
-          android_ripple={{color: 'transparent'}}
-          pressRetentionOffset={{top: 10, left: 10, bottom: 10, right: 10}}
+          android_ripple={{ color: 'transparent' }}
+          pressRetentionOffset={{ top: 10, left: 10, bottom: 10, right: 10 }}
         >
-          <ThemedText 
+          <ThemedText
             style={[
-              styles.tabText, 
-              { color: activeTab === 'scheduled' ? colors.tint : colors.textSecondary }
+              styles.tabText,
+              {
+                color:
+                  activeTab === 'scheduled'
+                    ? colors.tint
+                    : colors.textSecondary,
+              },
             ]}
           >
-            {t('schedule.mySchedules')} {scheduledClassesCount > 0 && `(${scheduledClassesCount})`}
+            {t('schedule.mySchedules')}{' '}
+            {scheduledClassesCount > 0 && `(${scheduledClassesCount})`}
           </ThemedText>
           {activeTab === 'scheduled' && (
-            <View style={[styles.indicator, { backgroundColor: colors.tint }]} />
+            <View
+              style={[styles.indicator, { backgroundColor: colors.tint }]}
+            />
           )}
         </Pressable>
       </View>
-      <View style={[styles.bottomLine, { backgroundColor: colorScheme === 'dark' ? '#333' : '#eee' }]} />
+      <View
+        style={[
+          styles.bottomLine,
+          { backgroundColor: colorScheme === 'dark' ? '#333' : '#eee' },
+        ]}
+      />
     </View>
   );
 };
@@ -102,4 +121,4 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
   },
-}); 
+});

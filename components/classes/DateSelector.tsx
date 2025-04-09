@@ -4,7 +4,13 @@ import { format } from 'date-fns';
 import { enUS, hy, ru } from 'date-fns/locale';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface DateSelectorProps {
   dates: Date[];
@@ -37,22 +43,27 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
     const today = new Date();
     const isToday = date.toDateString() === today.toDateString();
     const locale = getLocale();
-    
+
     if (isToday) {
       return {
         display: t('classes.today'),
-        isToday
+        isToday,
       };
     }
-    
+
     return {
       display: `${format(date, 'EEE', { locale })} ${format(date, 'd')}`,
-      isToday
+      isToday,
     };
   };
 
   return (
-    <View style={[styles.dateSelectionContainer, { borderBottomColor: colors.border }]}>
+    <View
+      style={[
+        styles.dateSelectionContainer,
+        { borderBottomColor: colors.border },
+      ]}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -60,7 +71,8 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
       >
         {dates.map((date, index) => {
           const formatted = formatDate(date);
-          const isSelected = date.toDateString() === selectedDate.toDateString();
+          const isSelected =
+            date.toDateString() === selectedDate.toDateString();
 
           return (
             <TouchableOpacity
@@ -68,19 +80,25 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
               activeOpacity={1}
               style={[
                 styles.dateItem,
-                formatted.isToday && { 
-                  borderRightColor: 'rgba(255,255,255,0.1)', 
+                formatted.isToday && {
+                  borderRightColor: 'rgba(255,255,255,0.1)',
                   borderRightWidth: 1,
                   height: '90%',
-                  alignSelf: 'center'
-                }
+                  alignSelf: 'center',
+                },
               ]}
               onPress={() => onDateSelect(date)}
             >
-              <Text style={[
-                styles.dateText,
-                { color: isSelected ? colors.accentPrimary : colors.textSecondary }
-              ]}>
+              <Text
+                style={[
+                  styles.dateText,
+                  {
+                    color: isSelected
+                      ? colors.accentPrimary
+                      : colors.textSecondary,
+                  },
+                ]}
+              >
                 {formatted.display}
               </Text>
             </TouchableOpacity>
@@ -112,4 +130,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-}); 
+});

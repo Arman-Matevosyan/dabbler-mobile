@@ -1,20 +1,18 @@
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
 
 import {
   ClassCard,
   DateSelector,
-  EmptyState,
   SkeletonCard,
   TimeRangeSlider,
 } from '@/components/classes';
 import { SearchWithCategories } from '@/components/shared';
 import { Colors } from '@/constants/Colors';
-import { useClassesSearch } from '@/hooks/classes/useClassesSearch';
-import { useNetwork } from '@/providers/NetworkProvider';
+import { useDiscoverClassSearch } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 import {
   useClassSearchFilters,
@@ -40,7 +38,6 @@ export default function ClassesScreen() {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
   const isFocused = useIsFocused();
-  const { refreshNetworkStatus } = useNetwork();
   const { t } = useTranslation();
 
   const { query, category, setQuery, setCategory } = useClassSearchFilters();
@@ -83,19 +80,32 @@ export default function ClassesScreen() {
       radius,
       query,
       category: category || [],
-      from_date,
-      to_date,
+      from_date: from_date.toISOString(),
+      to_date: to_date.toISOString(),
     }),
     [locationLat, locationLng, radius, query, category, from_date, to_date]
   );
 
-  const { data, isLoading, error, refetch } = useClassesSearch(
-    classParams,
-    isFocused
-  );
-  const [isNetworkError, setIsNetworkError] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
-  const classes = useMemo(() => data || [], [data]);
+  const { data, isLoading, error, refetch } =
+    useDiscoverClassSearch(classParams);
+
+  const classes = useMemo(() => {
+    if (!data?.response) return [];
+
+    return data.response.map((classItem) => ({
+      id: classItem.id,
+      name: classItem.name,
+      covers: classItem.covers || [],
+      date: classItem.date,
+      duration: classItem.duration,
+      venue: { name: classItem.venue?.name || '' },
+      instructorInfo: classItem.instructorInfo || '',
+      categories: classItem.categories || [],
+      scheduled: classItem.scheduled || false,
+      scheduledSpots: classItem.scheduledSpots || 0,
+      totalSpots: classItem.totalSpots || 0,
+    }));
+  }, [data]);
 
   useEffect(() => {
     if (from_date > to_date) {
@@ -150,42 +160,7 @@ export default function ClassesScreen() {
     if (isLoading) {
       return <SkeletonCard count={5} />;
     }
-
-    if (isOffline) {
-      return <EmptyState isOffline />;
-    }
-
-    if (isNetworkError) {
-      return <EmptyState isNetworkError />;
-    }
-
-    if (error) {
-      return (
-        <EmptyState
-          title={t('common.error')}
-          message={t('classes.unableToLoadClasses')}
-        />
-      );
-    }
-
-    return (
-      <EmptyState
-        title={t('classes.noClassesAvailable')}
-        message={
-          selectedDate
-            ? t('classes.noClassesScheduledForDate', {
-                date: selectedDate.toDateString(),
-              })
-            : t('classes.noClassesScheduled')
-        }
-      />
-    );
-  }, [isLoading, isOffline, isNetworkError, error, selectedDate, t]);
-
-  const handleRetry = useCallback(() => {
-    setIsNetworkError(false);
-    refreshNetworkStatus().then(() => refetch());
-  }, [refreshNetworkStatus, refetch]);
+  }, [isLoading, error, selectedDate, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -211,30 +186,6 @@ export default function ClassesScreen() {
         selectedDate={selectedDate}
         onDateSelect={(date) => setSelectedDate(date)}
       />
-
-      {(isNetworkError || isOffline) && (
-        <View
-          style={[
-            styles.errorContainer,
-            { backgroundColor: colors.errorBackground },
-          ]}
-        >
-          <Text style={[styles.errorText, { color: colors.errorText }]}>
-            {isOffline
-              ? t('classes.youAreOffline')
-              : t('classes.networkConnectionIssue')}
-          </Text>
-          <TouchableOpacity
-            style={[
-              styles.retryButton,
-              { backgroundColor: colors.accentPrimary },
-            ]}
-            onPress={handleRetry}
-          >
-            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <FlatList
         data={classes}

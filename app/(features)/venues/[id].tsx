@@ -5,11 +5,11 @@ import VenueDetailsSkeleton from '@/components/ui/MainTabsSkeletons/VenueDetails
 import { Colors } from '@/constants/Colors';
 import { darkMapStyle } from '@/constants/MapColors';
 import { useTooltip } from '@/contexts/TooltipContext';
+import { useUser } from '@/hooks';
+import { useVenueDetails } from '@/hooks/content';
 import { useFavorites } from '@/hooks/favorites/useFavorites';
-import { useUserProfile } from '@/hooks/profile/useUserProfile';
-import { useVenueDetails } from '@/hooks/venues/useVenueDetails';
 import { useTheme } from '@/providers/ThemeContext';
-import { Plan, Venue } from '@/types/types';
+import { Plan, Venue } from '@/types/enums';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -48,7 +48,7 @@ export default function VenueDetailsScreen() {
     toggleFavorite,
     isLoading: favoritesLoading,
   } = useFavorites();
-  const { isAuthenticated } = useUserProfile();
+  const { isAuthenticated } = useUser();
   const { showError } = useTooltip();
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showImportantInfo, setShowImportantInfo] = useState(false);
@@ -83,10 +83,7 @@ export default function VenueDetailsScreen() {
         setIsFavoriteState((prev) => !prev);
 
         if (error.message && error.message.includes('must be logged in')) {
-          showError(
-            t('auth.authRequired'),
-            t('auth.loginToAddFavorites')
-          );
+          showError(t('auth.authRequired'), t('auth.loginToAddFavorites'));
         }
       });
   }, [
@@ -246,7 +243,9 @@ export default function VenueDetailsScreen() {
           {venueDetails.description?.length > 120 && (
             <TouchableOpacity onPress={toggleDescription}>
               <Text style={[styles.readMore, { color: colors.accentPrimary }]}>
-                {showFullDescription ? t('venues.showLess') : t('venues.showMore')}
+                {showFullDescription
+                  ? t('venues.showLess')
+                  : t('venues.showMore')}
               </Text>
             </TouchableOpacity>
           )}
@@ -436,7 +435,9 @@ export default function VenueDetailsScreen() {
                 0 / {maxVisitsPerMonth} {t('schedule.booked')}
               </Text>
               <View style={styles.visitsLimitBadge}>
-                <Text style={styles.visitsLimitText}>{t('plans.perMonth')}</Text>
+                <Text style={styles.visitsLimitText}>
+                  {t('plans.perMonth')}
+                </Text>
               </View>
             </View>
             <View style={styles.progressBarContainer}>
@@ -521,7 +522,9 @@ export default function VenueDetailsScreen() {
             ]}
             activeOpacity={0.8}
           >
-            <Text style={styles.scheduleButtonText}>{t('venues.goToClasses')}</Text>
+            <Text style={styles.scheduleButtonText}>
+              {t('venues.goToClasses')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

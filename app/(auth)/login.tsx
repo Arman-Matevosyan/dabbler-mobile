@@ -2,9 +2,9 @@ import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
 import { loginFields } from '@/constants/FormFields';
+import { useAuth } from '@/hooks/auth/useAuth';
 import { useLoginForm } from '@/hooks/auth/useLoginForm';
 import { useStatusBarHeight } from '@/hooks/useStatusBarHeight';
-import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeContext';
 import { LoginFormData } from '@/utils/validation';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,17 +13,17 @@ import { useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TextInputProps,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface FloatingLabelInputProps extends TextInputProps {
@@ -161,7 +161,11 @@ const FloatingLabelInput = ({
       </View>
       {error && (
         <View style={inputStyles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={14} color={colors.errorText} />
+          <MaterialCommunityIcons
+            name="alert-circle"
+            size={14}
+            color={colors.errorText}
+          />
           <ThemedText
             style={[inputStyles.errorText, { color: colors.errorText }]}
           >
@@ -292,7 +296,11 @@ export default function LoginScreen() {
                     fieldState: { error },
                   }) => (
                     <FloatingLabelInput
-                      label={field.name === 'loginEmail' ? t('auth.email') : t('auth.password')}
+                      label={
+                        field.name === 'loginEmail'
+                          ? t('auth.email')
+                          : t('auth.password')
+                      }
                       value={value}
                       onChangeText={onChange}
                       onBlur={() => {
@@ -319,7 +327,9 @@ export default function LoginScreen() {
                 }}
                 style={{ alignSelf: 'flex-end', marginBottom: 8 }}
               >
-                <ThemedText style={{ fontSize: 12, color: colors.accentPrimary }}>
+                <ThemedText
+                  style={{ fontSize: 12, color: colors.accentPrimary }}
+                >
                   {t('auth.forgotPassword')}
                 </ThemedText>
               </TouchableOpacity>
@@ -336,7 +346,9 @@ export default function LoginScreen() {
                 {isLoading ? (
                   <ActivityIndicator color="white" size="small" />
                 ) : (
-                  <ThemedText style={styles.buttonText}>{t('auth.signIn')}</ThemedText>
+                  <ThemedText style={styles.buttonText}>
+                    {t('auth.signIn')}
+                  </ThemedText>
                 )}
               </TouchableOpacity>
 
@@ -357,7 +369,9 @@ export default function LoginScreen() {
                 <View
                   style={[styles.divider, { backgroundColor: colors.divider }]}
                 />
-                <ThemedText style={styles.dividerText}>{t('auth.or')}</ThemedText>
+                <ThemedText style={styles.dividerText}>
+                  {t('auth.or')}
+                </ThemedText>
                 <View
                   style={[styles.divider, { backgroundColor: colors.divider }]}
                 />

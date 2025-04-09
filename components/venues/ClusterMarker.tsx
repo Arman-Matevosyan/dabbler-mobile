@@ -15,7 +15,6 @@ const ClusterMarkerComponent: React.FC<ClusterMarkerProps> = memo(
     const scaleAnim = useRef(new Animated.Value(0.5)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
-    // Animate marker appearance when first mounted
     useEffect(() => {
       Animated.parallel([
         Animated.timing(opacityAnim, {

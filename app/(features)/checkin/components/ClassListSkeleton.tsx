@@ -7,7 +7,9 @@ interface ClassListSkeletonProps {
   count?: number;
 }
 
-export const ClassListSkeleton: React.FC<ClassListSkeletonProps> = ({ count = 4 }) => {
+export const ClassListSkeleton: React.FC<ClassListSkeletonProps> = ({
+  count = 4,
+}) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const animatedOpacity = React.useRef(new Animated.Value(0.3)).current;
@@ -57,7 +59,10 @@ export const ClassListSkeleton: React.FC<ClassListSkeletonProps> = ({ count = 4 
           <View style={styles.cardContent}>
             <View style={styles.imageContainer}>
               <View
-                style={[styles.skeletonImage, { backgroundColor: skeletonColor }]}
+                style={[
+                  styles.skeletonImage,
+                  { backgroundColor: skeletonColor },
+                ]}
               />
             </View>
             <View style={styles.textContainer}>
@@ -161,4 +166,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginRight: 8,
   },
-}); 
+});

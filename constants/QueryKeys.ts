@@ -1,23 +1,55 @@
-export enum QueryKeys {
-  venuesDataQueryKey = 'VenuesData',
-  venuesSearchQueryKey = 'VenuesSearchData',
-  categoriesQueryKey = 'CategoriesData',
-  venuesDataByCordsQueryKey = 'VenuesDataByCord',
-  venuesDetailsDataQueryKey = 'VenuesDetailsData',
-  venuesPlansDataQueryKey = 'VenuesPlasData',
-  userSessionQueryKey = 'UserSession',
-  userQueryKey = 'UserData',
-  subscriptionsQueryKey = 'SubscriptionData',
-  plansQueryKey = 'PlansData',
-  paymentMethodsQueryKey = 'PaymentMethodsData',
-  paymentGatewayTokenQueryKey = 'PaymentGatewayToken',
-  favoritesQueryKey = 'favorites',
-  venuesSearchBottomSheetQueryKey = 'VenuesDataBottomSheet',
-  checkinQueryKey = 'ProfileCheckIn',
-  classesSearchQueryKey = 'ClassesSearch',
-  venueClassesQueryKey = 'VenueClasses',
-  classDetailsQueryKey = 'ClassDetails',
-  paymentSuccessQueryKey = 'PaymentSuccessData',
-  paymentCreateSubQueryKey = 'PaymentSubData',
-  schedulesDataQuerykey = 'SchedulesData',
+export enum AuthQueryKeys {
+  AUTH_STATE = 'authState',
+  SESSION = 'session',
+  TOKEN = 'token',
+  REFRESH = 'refresh',
+  USER_AVATAR = 'userAvatar',
+}
+
+export enum VenueQueryKeys {
+  venuesData = 'VenuesData',
+  venuesSearch = 'VenuesSearchData',
+  venuesByCoords = 'VenuesDataByCord',
+  venueDetails = 'VenuesDetailsData',
+  venuePlans = 'VenuesPlasData',
+  venuesSearchBottomSheet = 'VenuesDataBottomSheet',
+  favorites = 'favorites',
+}
+
+export enum UserQueryKeys {
+  userSession = 'UserSession',
+  userData = 'UserData',
+  checkins = 'ProfileCheckIn',
+}
+
+export enum PaymentQueryKeys {
+  subscriptions = 'SubscriptionData',
+  plans = 'PlansData',
+  paymentMethods = 'PaymentMethodsData',
+  gatewayToken = 'PaymentGatewayToken',
+  paymentSuccess = 'PaymentSuccessData',
+  createSubscription = 'PaymentSubData',
+}
+
+export enum ClassQueryKeys {
+  classesSearch = 'ClassesSearch',
+  venueClasses = 'VenueClasses',
+  classDetails = 'ClassDetails',
+  schedules = 'SchedulesData',
+  classBooking = 'ClassBooking',
+  cancelBooking = 'CancelBooking',
+  discoverSearch = 'DiscoverSearch',
+  discoverVenue = 'DiscoverVenue',
+  discoverCheckins = 'DiscoverCheckins',
+  discoverSchedules = 'DiscoverSchedules',
+  discoverAllSchedules = 'DiscoverAllSchedules',
+  discoverClassDetails = 'DiscoverClassDetails',
+}
+
+export enum ContentQueryKeys {
+  categories = 'CategoriesData',
+}
+
+export enum ActivityQueryKeys {
+  activity = 'activity',
 }

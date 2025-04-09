@@ -1,6 +1,6 @@
-import { QueryKeys } from '@/constants/QueryKeys';
-import { useClassBook } from '@/hooks/classes/useClassBook';
-import { ClassDetailResponse } from '@/hooks/classes/useClassDetails';
+import { ClassQueryKeys } from '@/constants/QueryKeys';
+import { useClassBook } from '@/hooks/content';
+import type { ClassDetailResponse } from '@/hooks/content/useClasses';
 import { queryClient } from '@/lib/queryClient';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
@@ -40,11 +40,11 @@ export const BookingConfirmationPanel: React.FC<
       });
 
       queryClient.invalidateQueries({
-        queryKey: [QueryKeys.schedulesDataQuerykey],
+        queryKey: [ClassQueryKeys.schedules],
       });
 
       queryClient.invalidateQueries({
-        queryKey: [QueryKeys.classDetailsQueryKey, classData.id],
+        queryKey: [ClassQueryKeys.classDetails, classData.id],
       });
 
       setShowSuccessView(true);

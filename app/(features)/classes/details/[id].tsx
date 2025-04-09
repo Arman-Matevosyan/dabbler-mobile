@@ -6,11 +6,14 @@ import {
 import GenericImageCarousel from '@/components/shared/GenericImageCarousel';
 import { Colors } from '@/constants/Colors';
 import { darkMapStyle } from '@/constants/MapColors';
-import { useMyschedules, useTooltip, useUserProfile } from '@/hooks';
-import { useClassDetails } from '@/hooks/classes/useClassDetails';
+import { ClassQueryKeys } from '@/constants/QueryKeys';
+import { useMyschedules, useTooltip, useUser } from '@/hooks';
+import { useDetailedClassDetails } from '@/hooks/content';
+import { queryClient } from '@/lib/queryClient';
 import { useTheme } from '@/providers/ThemeContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import * as Calendar from 'expo-calendar';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +22,7 @@ import {
   Animated,
   Dimensions,
   Image,
-  Share,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -29,11 +32,9 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
 
-// Custom type for scheduled classes
 interface ScheduledClass {
   id: string;
   scheduled: boolean;
-  // other properties as needed
 }
 
 export default function ClassDetailsScreen() {
@@ -43,29 +44,26 @@ export default function ClassDetailsScreen() {
   const { colorScheme } = useTheme() || { colorScheme: 'dark' };
   const colors = Colors[colorScheme || 'dark'];
   const { t } = useTranslation();
-  const { showError } = useTooltip();
-  const { isAuthenticated } = useUserProfile();
+  const { showError, showSuccess } = useTooltip();
+  const { isAuthenticated } = useUser();
   const scrollY = useRef(new Animated.Value(0)).current;
   const {
     classData,
     isLoading: classLoading,
     error,
     refetch,
-  } = useClassDetails({ id, date });
+  } = useDetailedClassDetails({ id, date });
   const [isBookingPanelVisible, setIsBookingPanelVisible] = useState(false);
   const [isCancellationPanelVisible, setIsCancellationPanelVisible] =
     useState(false);
   const [showSuccessBottomSheet, setShowSuccessBottomSheet] = useState(false);
   const [showCancelBottomSheet, setShowCancelBottomSheet] = useState(false);
   const { data: schedulesData, refetch: refetchSchedules } = useMyschedules();
-
-  // Check if class is already booked
+  console.log(schedulesData, classData);
   const isClassBooked = useMemo(() => {
     if (!schedulesData || !classData) return false;
 
-    return (schedulesData as ScheduledClass[]).some(
-      (schedule) => schedule.id === classData.id && schedule.scheduled === true
-    );
+    return schedulesData.some((schedule) => schedule.classId === classData.id);
   }, [schedulesData, classData]);
 
   const headerOpacity = scrollY.interpolate({
@@ -83,7 +81,6 @@ export default function ClassDetailsScreen() {
   }, []);
 
   useEffect(() => {
-    // Refetch schedules when screen is focused
     refetchSchedules();
   }, [refetchSchedules]);
 
@@ -110,47 +107,215 @@ export default function ClassDetailsScreen() {
       showError(t('classes.authentication'), t('classes.loginToCancel'));
       return;
     }
-    // Open the cancellation panel directly
     setIsCancellationPanelVisible(true);
   };
 
   const handleCancellationSuccess = () => {
     setIsCancellationPanelVisible(false);
 
-    setTimeout(() => {
-      setShowCancelBottomSheet(true);
-      refetchSchedules();
-      refetch();
-    }, 300);
+    if (schedulesData && classData) {
+      const newSchedulesData = schedulesData.map((schedule) => {
+        if (schedule.classId === classData.id) {
+          return { ...schedule, status: 'cancelled' };
+        }
+        return schedule;
+      });
+
+      queryClient.setQueryData([ClassQueryKeys.schedules], newSchedulesData);
+    }
+
+    setShowCancelBottomSheet(true);
+
+    Promise.all([refetchSchedules(), refetch()]).catch((error) => {
+      console.error('Error refetching data after cancellation:', error);
+    });
   };
 
   const handleBookingSuccess = () => {
     setIsBookingPanelVisible(false);
 
-    setTimeout(() => {
-      setShowSuccessBottomSheet(true);
-      refetchSchedules();
-      refetch();
-    }, 300);
+    if (schedulesData && classData) {
+      const existingSchedule = schedulesData.find(
+        (schedule) => schedule.classId === classData.id
+      );
+
+      let newSchedulesData = [...schedulesData];
+
+      if (!existingSchedule) {
+        newSchedulesData.push({
+          id: crypto.randomUUID(),
+          classId: classData.id,
+          className: classData.name,
+          venueId: classData.venue?.id || '',
+          venueName: classData.venue?.name || '',
+          startDate: classData.date || '',
+          duration: classData.duration || 0,
+          status: 'active',
+        });
+      } else {
+        newSchedulesData = newSchedulesData.map((schedule) => {
+          if (schedule.classId === classData.id) {
+            return { ...schedule, status: 'active' };
+          }
+          return schedule;
+        });
+      }
+
+      queryClient.setQueryData([ClassQueryKeys.schedules], newSchedulesData);
+    }
+
+    setShowSuccessBottomSheet(true);
+
+    Promise.all([refetchSchedules(), refetch()]).catch((error) => {
+      console.error('Error refetching data after booking:', error);
+    });
   };
 
-  const handleShare = async () => {
-    if (!classData) return;
-
-    const classDate = new Date(classData.date || '');
-    const formattedDate = format(classDate, 'EEE, dd MMM');
-    const startTime = format(classDate, 'HH:mm');
-    const endTime = format(
-      new Date(classDate.getTime() + (classData.duration || 0) * 60000),
-      'HH:mm'
-    );
+  const handleAddToCalendar = async () => {
+    if (!classData || !classData.date) {
+      showError(
+        t('common.error'),
+        t('classes.noDateForCalendar', 'Class date information is missing')
+      );
+      return;
+    }
 
     try {
-      await Share.share({
-        message: `Join me for ${classData.name} at ${classData.venue?.name} on ${formattedDate} from ${startTime} to ${endTime}!`,
-      });
-    } catch (error) {
-      console.error('Error sharing:', error);
+      const classStartDate = new Date(classData.date);
+      if (isNaN(classStartDate.getTime())) {
+        showError(
+          t('common.error'),
+          t('classes.invalidDate', 'Invalid class date format')
+        );
+        return;
+      }
+
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+
+      if (status !== 'granted') {
+        showError(
+          t('common.permissionDenied'),
+          t(
+            'classes.calendarPermissionDenied',
+            'Calendar permission is required to add this class to your calendar'
+          )
+        );
+        return;
+      }
+
+      const calendars = await Calendar.getCalendarsAsync(
+        Calendar.EntityTypes.EVENT
+      );
+
+      let defaultCalendar;
+
+      if (Platform.OS === 'ios') {
+        defaultCalendar = calendars.find(
+          (cal: any) =>
+            cal.allowsModifications && cal.source?.name === 'Default'
+        );
+
+        if (!defaultCalendar) {
+          defaultCalendar = calendars.find(
+            (cal: any) =>
+              cal.allowsModifications && cal.source?.name === 'iCloud'
+          );
+        }
+      } else {
+        defaultCalendar = calendars.find(
+          (cal: any) =>
+            cal.allowsModifications &&
+            cal.accessLevel === Calendar.CalendarAccessLevel.OWNER &&
+            cal.source?.type === 'com.google'
+        );
+      }
+
+      if (!defaultCalendar) {
+        defaultCalendar = calendars.find((cal: any) => cal.allowsModifications);
+      }
+
+      if (!defaultCalendar && calendars.length > 0) {
+        defaultCalendar = calendars[0];
+      }
+
+      if (!defaultCalendar) {
+        showError(
+          t('common.error'),
+          t(
+            'classes.noCalendarAvailable',
+            'No calendar found on your device. Please make sure you have a calendar app installed.'
+          )
+        );
+        return;
+      }
+
+      const classEndDate = new Date(
+        classStartDate.getTime() + (classData.duration || 60) * 60000
+      );
+
+      const eventDetails: any = {
+        title: classData.name || 'Class Booking',
+        startDate: classStartDate,
+        endDate: classEndDate,
+        location: classData.venue?.name || '',
+        notes:
+          classData.description ||
+          t('classes.bookingConfirmed', 'Booking confirmed'),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+
+      if (Platform.OS === 'ios') {
+        eventDetails.alarms = [
+          { relativeOffset: -60 }, // 1 hour before
+        ];
+      } else {
+        eventDetails.alarms = [
+          { relativeOffset: -60 }, // 1 hour before
+        ];
+      }
+
+      const eventId = await Calendar.createEventAsync(
+        defaultCalendar.id,
+        eventDetails
+      );
+
+      if (eventId) {
+        setShowSuccessBottomSheet(false);
+
+        showSuccess(
+          t(
+            'classes.calendarEventCreated',
+            'Class has been added to your calendar'
+          )
+        );
+      } else {
+        throw new Error('Failed to create event: no event ID returned');
+      }
+    } catch (error: any) {
+      console.error('Error adding event to calendar:', error);
+
+      // Check if error is permission related
+      if (
+        error?.message &&
+        typeof error.message === 'string' &&
+        error.message.includes('permission')
+      ) {
+        showError(
+          t('common.error'),
+          t(
+            'classes.calendarPermissionDenied',
+            'Calendar permission is required to add this class to your calendar'
+          )
+        );
+      } else {
+        showError(
+          t('common.error'),
+          t(
+            'classes.calendarAddError',
+            'Could not add to calendar: ' + (error?.message || 'unknown error')
+          )
+        );
+      }
     }
   };
 
@@ -158,7 +323,11 @@ export default function ClassDetailsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <TouchableOpacity style={styles.backButton} onPress={closeScreen}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={closeScreen}
+            activeOpacity={1}
+          >
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -179,7 +348,11 @@ export default function ClassDetailsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <TouchableOpacity style={styles.backButton} onPress={closeScreen}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={closeScreen}
+            activeOpacity={1}
+          >
             <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -197,6 +370,7 @@ export default function ClassDetailsScreen() {
           <TouchableOpacity
             style={[styles.tryAgainButton, { backgroundColor: colors.tint }]}
             onPress={closeScreen}
+            activeOpacity={1}
           >
             <Text style={styles.tryAgainButtonText}>{t('classes.goBack')}</Text>
           </TouchableOpacity>
@@ -205,6 +379,7 @@ export default function ClassDetailsScreen() {
     );
   }
 
+  // Format date and time if available
   let formattedDate = '';
   let formattedTimeRange = '';
 
@@ -226,11 +401,16 @@ export default function ClassDetailsScreen() {
     }
   }
 
-  // Calculate cancellation deadline
-  const cancelMinutes = 240; // Default to 4 hours
-  const classDate = new Date(classData.date || '');
-  const cancelDate = new Date(classDate.getTime() - cancelMinutes * 60000);
-  const cancelDateStr = format(cancelDate, 'EEE, d MMM HH:mm');
+  // Calculate cancellation deadline - only if we have a valid date
+  let cancelDateStr = '';
+  if (classData.date) {
+    const cancelMinutes = 240; // Default to 4 hours
+    const classDate = new Date(classData.date);
+    if (!isNaN(classDate.getTime())) {
+      const cancelDate = new Date(classDate.getTime() - cancelMinutes * 60000);
+      cancelDateStr = format(cancelDate, 'EEE, d MMM HH:mm');
+    }
+  }
 
   const availableSpots = classData.scheduledSpots ?? 0;
   const totalSpots = classData.totalSpots || 0;
@@ -315,6 +495,7 @@ export default function ClassDetailsScreen() {
         ]}
       >
         <TouchableOpacity
+          activeOpacity={1}
           style={styles.fixedHeaderButton}
           onPress={closeScreen}
         >
@@ -396,7 +577,11 @@ export default function ClassDetailsScreen() {
                       "See you soon! Please check the venue or class details to ensure you're fully prepared for the session."
                     )}
                   </Text>
-                  <TouchableOpacity style={styles.addToCalendarButton}>
+                  <TouchableOpacity
+                    style={styles.addToCalendarButton}
+                    onPress={handleAddToCalendar}
+                    activeOpacity={1}
+                  >
                     <Ionicons
                       name="calendar-outline"
                       size={18}
@@ -414,7 +599,8 @@ export default function ClassDetailsScreen() {
           {/* Show cancellation info when booked but not when showing bottom sheets */}
           {isClassBooked &&
             !showSuccessBottomSheet &&
-            !showCancelBottomSheet && (
+            !showCancelBottomSheet &&
+            cancelDateStr && (
               <View style={styles.cancellationInfoContainer}>
                 <Ionicons
                   name="information-circle-outline"
@@ -448,7 +634,7 @@ export default function ClassDetailsScreen() {
               >
                 {classData.description}
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity activeOpacity={1}>
                 <Text style={styles.readMoreText}>{t('venues.showMore')}</Text>
               </TouchableOpacity>
             </View>
@@ -462,6 +648,7 @@ export default function ClassDetailsScreen() {
                 {t('venues.details')}
               </Text>
               <TouchableOpacity
+                activeOpacity={1}
                 style={styles.sectionAction}
                 onPress={goToVenue}
               >
@@ -470,7 +657,11 @@ export default function ClassDetailsScreen() {
             </View>
 
             {classData.venue && (
-              <TouchableOpacity style={styles.venueCard} onPress={goToVenue}>
+              <TouchableOpacity
+                style={styles.venueCard}
+                onPress={goToVenue}
+                activeOpacity={1}
+              >
                 {classData.venue.id && (
                   <Image
                     source={{ uri: coverImageUrl }}
@@ -534,7 +725,7 @@ export default function ClassDetailsScreen() {
               {t('classes.location')}
             </Text>
 
-            <TouchableOpacity style={styles.mapContainer}>
+            <TouchableOpacity style={styles.mapContainer} activeOpacity={1}>
               {renderMap()}
             </TouchableOpacity>
           </View>
@@ -556,6 +747,7 @@ export default function ClassDetailsScreen() {
               {spotDisplay}
             </Text>
             <TouchableOpacity
+              activeOpacity={1}
               style={[
                 styles.bookButton,
                 {
@@ -583,6 +775,7 @@ export default function ClassDetailsScreen() {
               {t('schedule.booked')}
             </Text>
             <TouchableOpacity
+              activeOpacity={1}
               style={[styles.cancelButton, { backgroundColor: '#FF3B30' }]}
               onPress={handleCancelBooking}
             >
@@ -594,36 +787,15 @@ export default function ClassDetailsScreen() {
         )}
       </View>
 
-      {isBookingPanelVisible && (
-        <BookingConfirmationPanel
-          visible={isBookingPanelVisible}
-          onClose={() => setIsBookingPanelVisible(false)}
-          classData={classData}
-          classDetail={classData}
-          colors={colors}
-          onBookingSuccess={handleBookingSuccess}
-        />
-      )}
-
-      {isCancellationPanelVisible && (
-        <CancellationConfirmationPanel
-          visible={isCancellationPanelVisible}
-          onClose={() => setIsCancellationPanelVisible(false)}
-          classData={classData}
-          classDetail={classData}
-          colors={{ ...colors, errorColor: '#FF3B30' }}
-          onCancellationSuccess={handleCancellationSuccess}
-        />
-      )}
-
       {classData && (
         <>
           <BookingStatusBottomSheet
             visible={showSuccessBottomSheet}
             onClose={() => {
               setShowSuccessBottomSheet(false);
-              refetch();
+              // Refresh data again when closing the sheet
               refetchSchedules();
+              refetch();
             }}
             type="success"
             colors={{
@@ -636,42 +808,21 @@ export default function ClassDetailsScreen() {
             }}
             classData={{
               name: classData.name,
-              date: classData.date
-                ? (() => {
-                    const classDate = new Date(classData.date);
-                    const formattedDate = format(classDate, 'EEE, dd MMM');
-                    const startTime = format(classDate, 'HH:mm');
-                    const endTime = classData.duration
-                      ? format(
-                          new Date(
-                            classDate.getTime() + classData.duration * 60000
-                          ),
-                          'HH:mm'
-                        )
-                      : '';
-                    return `${formattedDate} ${startTime}${
-                      endTime ? ` - ${endTime}` : ''
-                    }`;
-                  })()
-                : undefined,
-              venue: classData.venue
-                ? {
-                    name: classData.venue.name,
-                  }
-                : undefined,
+              date: classData.date || undefined,
+              venue: {
+                name: classData.venue?.name || undefined,
+              },
             }}
-            onAddToCalendar={() => {
-              setShowSuccessBottomSheet(false);
-            }}
+            onAddToCalendar={handleAddToCalendar}
           />
 
           <BookingStatusBottomSheet
             visible={showCancelBottomSheet}
             onClose={() => {
               setShowCancelBottomSheet(false);
-              // Refresh class status after closing
-              refetch();
+              // Refresh data again when closing the sheet
               refetchSchedules();
+              refetch();
             }}
             type="cancelled"
             colors={{
@@ -679,19 +830,41 @@ export default function ClassDetailsScreen() {
               textPrimary: colors.textPrimary,
               textSecondary: colors.textSecondary,
               successColor: '#4CAF50',
+              errorColor: '#FF3B30',
               buttonColor: colors.tint,
               backdropColor: 'rgba(0,0,0,0.7)',
             }}
             classData={{
               name: classData.name,
-              venue: classData.venue
-                ? {
-                    name: classData.venue.name,
-                  }
-                : undefined,
+              date: classData.date || undefined,
+              venue: {
+                name: classData.venue?.name || undefined,
+              },
             }}
           />
         </>
+      )}
+
+      {isBookingPanelVisible && classData && (
+        <BookingConfirmationPanel
+          visible={isBookingPanelVisible}
+          onClose={() => setIsBookingPanelVisible(false)}
+          classData={classData}
+          classDetail={classData}
+          colors={colors}
+          onBookingSuccess={handleBookingSuccess}
+        />
+      )}
+
+      {isCancellationPanelVisible && classData && (
+        <CancellationConfirmationPanel
+          visible={isCancellationPanelVisible}
+          onClose={() => setIsCancellationPanelVisible(false)}
+          classData={classData}
+          classDetail={classData}
+          colors={{ ...colors, errorColor: '#FF3B30' }}
+          onCancellationSuccess={handleCancellationSuccess}
+        />
       )}
     </View>
   );
@@ -975,7 +1148,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  // Cancellation info styling
   cancellationInfoContainer: {
     flexDirection: 'row',
     padding: 12,

@@ -1,13 +1,12 @@
-import Svg, { Path } from "react-native-svg"
+import Svg, { Path, SvgProps } from 'react-native-svg';
 
-function GirlDoingYoga(props) {
+function GirlDoingYoga(props: SvgProps) {
   return (
     <Svg
       width={2676}
       height={2248}
       viewBox="0 0 2676 2248"
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
       <Path
@@ -343,7 +342,7 @@ function GirlDoingYoga(props) {
         fill="#387CDF"
       />
     </Svg>
-  )
+  );
 }
 
-export default GirlDoingYoga
+export default GirlDoingYoga;

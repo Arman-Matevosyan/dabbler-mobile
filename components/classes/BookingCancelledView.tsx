@@ -16,20 +16,28 @@ export const BookingCancelledView = ({ colors }: BookingCancelledViewProps) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.iconContainer, { backgroundColor: colors.successColor }]}>
+      <View
+        style={[styles.iconContainer, { backgroundColor: colors.successColor }]}
+      >
         <Ionicons name="checkmark" size={40} color="white" />
       </View>
-      
+
       <Text style={[styles.title, { color: colors.textPrimary }]}>
         {t('classes.bookingCancelled', 'Booking cancelled')}
       </Text>
-      
+
       <Text style={[styles.message, { color: colors.textSecondary }]}>
-        {t('classes.cancellationSuccessMessage', 'Confirmation: You\'ve successfully canceled this class.')}
+        {t(
+          'classes.cancellationSuccessMessage',
+          "Confirmation: You've successfully canceled this class."
+        )}
       </Text>
-      
+
       <Text style={[styles.subMessage, { color: colors.textSecondary }]}>
-        {t('classes.classReinstatementMessage', 'The good news: We\'ve reinstated one of your check-ins! We look forward to welcoming you to another exciting session soon!')}
+        {t(
+          'classes.classReinstatementMessage',
+          "The good news: We've reinstated one of your check-ins! We look forward to welcoming you to another exciting session soon!"
+        )}
       </Text>
     </View>
   );
@@ -63,5 +71,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-  }
-}); 
+  },
+});

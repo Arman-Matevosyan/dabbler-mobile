@@ -1,8 +1,7 @@
 import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/providers/ThemeContext';
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Plan as AppPlan } from '@/types/types';
+import { Plan as AppPlan } from '@/types/enums';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface PlanProps {
   name: string;
@@ -18,20 +17,25 @@ interface PlanChipProps {
 const PlanChip = ({ plan, style }: PlanChipProps) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
-  
+
   const planName = plan.name || 'Unnamed Plan';
   const planLimit = plan.limit || 0;
   const planDescription = plan.description || 'No description available';
-  
+
   return (
-    <View style={[styles.planChip, { backgroundColor: colors.secondary }, style]}>
+    <View
+      style={[styles.planChip, { backgroundColor: colors.secondary }, style]}
+    >
       <Text style={[styles.planName, { color: colors.textPrimary }]}>
         {planName}
       </Text>
       <Text style={[styles.planLimit, { color: colors.accentPrimary }]}>
         {planLimit} visits/month
       </Text>
-      <Text style={[styles.planDescription, { color: colors.textSecondary }]} numberOfLines={1}>
+      <Text
+        style={[styles.planDescription, { color: colors.textSecondary }]}
+        numberOfLines={1}
+      >
         {planDescription}
       </Text>
     </View>
@@ -60,4 +64,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PlanChip; 
+export default PlanChip;

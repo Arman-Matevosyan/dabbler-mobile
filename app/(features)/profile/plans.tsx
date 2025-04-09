@@ -1,41 +1,36 @@
 import ProfilePageSkeleton from '@/components/ui/MainTabsSkeletons/ProfilePageSkeleton';
 import SkeletonScreen from '@/components/ui/MainTabsSkeletons/SkeletonScreen';
 import { Colors } from '@/constants/Colors';
-import { usePlans, useSubscriptions } from '@/hooks';
+import { usePlans } from '@/hooks/payment/usePayment';
+import { useSubscriptions } from '@/hooks/payment/useSubscriptions';
 import { useTheme } from '@/providers/ThemeContext';
-import { Plan as AppPlan } from '@/types/types';
+import { IPlan, ISubscription } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
-interface Plan {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  currencyIsoCode: string;
-  limit: number;
-  venues: any[];
-}
-
 export default function PlansProfileScreen() {
-  const { plans, isLoading } = usePlans();
   const { colorScheme } = useTheme();
   const theme = Colors[colorScheme];
-  const { subscription } = useSubscriptions();
+  const { data: plans, isLoading } = usePlans();
+  const { data: subscriptionData } = useSubscriptions();
   const { t } = useTranslation();
   const [showAllPlans, setShowAllPlans] = useState(false);
+
+  const subscription = subscriptionData as ISubscription | undefined;
+
   const hasActivePlan = Boolean(subscription?.plan?.planId);
+
   useEffect(() => {
     setShowAllPlans(false);
   }, [subscription]);
@@ -50,15 +45,15 @@ export default function PlansProfileScreen() {
     if (subscription?.plan?.planId) {
       return plans.filter(
         (plan) =>
-          (plan as AppPlan).id === subscription.plan?.planId ||
-          (plan as AppPlan).planId === subscription.plan?.planId
+          plan.id === subscription.plan?.planId ||
+          plan.planId === subscription.plan?.planId
       );
     }
 
     return [];
   }, [plans, subscription, hasActivePlan, showAllPlans]);
 
-  const renderPlanCard = (plan: AppPlan, index: number) => {
+  const renderPlanCard = (plan: IPlan, index: number) => {
     const planId = plan.id || plan.planId;
     const isPopular = index === 1;
     const isActive = subscription?.plan?.planId === planId;
@@ -244,7 +239,7 @@ export default function PlansProfileScreen() {
 
       <View style={styles.cardsContainer}>
         {plansToDisplay.map((plan, index) =>
-          renderPlanCard(plan as AppPlan, index)
+          renderPlanCard(plan as IPlan, index)
         )}
       </View>
     </ScrollView>
