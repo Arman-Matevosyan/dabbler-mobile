@@ -2,7 +2,6 @@ import { SocialLoginButtons } from '@/components/auth/SocialLoginButtons';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
 import { loginFields } from '@/constants/FormFields';
-import { useAuth } from '@/hooks/auth/useAuth';
 import { useLoginForm } from '@/hooks/auth/useLoginForm';
 import { useStatusBarHeight } from '@/hooks/useStatusBarHeight';
 import { useTheme } from '@/providers/ThemeContext';
@@ -182,9 +181,7 @@ export default function LoginScreen() {
   const colors = Colors[colorScheme];
   const { t } = useTranslation();
   const statusBarHeight = useStatusBarHeight();
-  const { handleSocialLogin, socialLoading } = useAuth();
   const { form: loginForm, handleSubmit, isLoading } = useLoginForm();
-  const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const styles = StyleSheet.create({
@@ -344,10 +341,10 @@ export default function LoginScreen() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <ActivityIndicator color="white" size="small" />
+                  <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <ThemedText style={styles.buttonText}>
-                    {t('auth.signIn')}
+                    {t('loginButton')}
                   </ThemedText>
                 )}
               </TouchableOpacity>

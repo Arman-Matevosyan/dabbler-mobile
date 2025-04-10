@@ -1,14 +1,19 @@
 import { axiosClient } from '@/api';
+import { refreshToken as refreshTokenFunction } from '@/api/refreshToken';
 import { AuthQueryKeys } from '@/constants/QueryKeys';
 import { getBaseURL } from '@/constants/constants';
-import { invalidateAuthDependentQueries, queryClient } from '@/services/query/queryClient';
+import {
+  invalidateAuthDependentQueries,
+  queryClient,
+} from '@/services/query/queryClient';
+import { useAuthStore } from '@/store/authStore';
 import * as authUtils from '@/utils/authUtils';
 import axios from 'axios';
 
-// Basic Auth Types
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  expiresIn?: number;
 }
 
 export interface TokenResponse {
@@ -25,6 +30,7 @@ export interface SocialLoginResult {
   success: boolean;
   accessToken?: string;
   refreshToken?: string;
+  expiresIn?: number;
 }
 
 export interface SocialAuthDeepLinkResult {
@@ -32,13 +38,27 @@ export interface SocialAuthDeepLinkResult {
   loginType?: 'google' | 'facebook' | 'unknown';
 }
 
-// Regular Authentication API
 export const AuthAPI = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     const response = await axiosClient.post('/auth/signin', {
       email,
       password,
     });
+
+    useAuthStore
+      .getState()
+      .setTokens(
+        response.data.accessToken,
+        response.data.refreshToken,
+        response.data.expiresIn
+      );
+
+    await authUtils.setTokens(
+      response.data.accessToken,
+      response.data.refreshToken,
+      response.data.expiresIn
+    );
+
     return response.data;
   },
 
@@ -54,6 +74,21 @@ export const AuthAPI = {
       firstName,
       lastName,
     });
+
+    useAuthStore
+      .getState()
+      .setTokens(
+        response.data.accessToken,
+        response.data.refreshToken,
+        response.data.expiresIn
+      );
+
+    await authUtils.setTokens(
+      response.data.accessToken,
+      response.data.refreshToken,
+      response.data.expiresIn
+    );
+
     return response.data;
   },
 
@@ -62,19 +97,21 @@ export const AuthAPI = {
   },
 
   logout: async (): Promise<void> => {
-    await axiosClient.post('/auth/logout');
+    try {
+      await axiosClient.post('/auth/logout');
+    } finally {
+      useAuthStore.getState().logout();
+
+      await authUtils.clearTokens();
+
+      queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
+        isAuthenticated: false,
+      });
+    }
   },
 
-  refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
-    const response = await axiosClient.get('/auth/refresh', {
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
-      },
-    });
-    return response.data;
-  },
+  refreshToken: refreshTokenFunction,
 
-  // Social Auth Functions
   googleLogin: (): string => {
     return `${axiosClient.defaults.baseURL}/auth/google`;
   },
@@ -83,75 +120,93 @@ export const AuthAPI = {
     return `${axiosClient.defaults.baseURL}/auth/fb`;
   },
 
-  // Token exchange for social auth
-  exchangeToken: async (token: string, type?: string): Promise<SocialLoginResult> => {
+  exchangeToken: async (
+    token: string,
+    type?: string
+  ): Promise<SocialLoginResult> => {
     try {
-      // If we have a type, this is a social login token
       if (type === 'google' || type === 'facebook') {
-        const endpoint = type === 'google' ? '/auth/google/token' : '/auth/fb/token';
+        const endpoint =
+          type === 'google' ? '/auth/google/token' : '/auth/fb/token';
         const response = await axios.post<AuthResponse>(
           `${getBaseURL()}${endpoint}`,
           { token },
           { headers: { 'Content-Type': 'application/json' } }
         );
-        
+
         if (response.data.accessToken) {
+          useAuthStore
+            .getState()
+            .setTokens(
+              response.data.accessToken,
+              response.data.refreshToken,
+              response.data.expiresIn
+            );
+
           await authUtils.setTokens(
             response.data.accessToken,
-            response.data.refreshToken
+            response.data.refreshToken,
+            response.data.expiresIn
           );
-          
-          // Update auth state
+
           queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-            isAuthenticated: true
+            isAuthenticated: true,
           });
-          
+
           invalidateAuthDependentQueries();
-          
+
           return {
             success: true,
             accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken
+            refreshToken: response.data.refreshToken,
+            expiresIn: response.data.expiresIn,
           };
         }
-      } 
-      // Otherwise, treat it as a refresh token
-      else {
+      } else {
         const response = await axios.post<AuthResponse>(
           `${getBaseURL()}/auth/refresh`,
           { refreshToken: token },
           { headers: { 'Content-Type': 'application/json' } }
         );
-        
+
         if (response.data.accessToken) {
+          useAuthStore
+            .getState()
+            .setTokens(
+              response.data.accessToken,
+              response.data.refreshToken || token,
+              response.data.expiresIn
+            );
+
           await authUtils.setTokens(
             response.data.accessToken,
-            response.data.refreshToken || token
+            response.data.refreshToken || token,
+            response.data.expiresIn
           );
-          
+
           queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-            isAuthenticated: true
+            isAuthenticated: true,
           });
-          
+
           invalidateAuthDependentQueries();
-          
+
           return {
             success: true,
             accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken || token
+            refreshToken: response.data.refreshToken || token,
+            expiresIn: response.data.expiresIn,
           };
         }
       }
-      
+
       return { success: false };
     } catch (error) {
       console.error('Error exchanging token:', error);
       return { success: false };
     }
-  }
+  },
 };
 
-// Utility Functions for Social Auth
 export const extractTokenFromUrl = (url: string): TokenResponse | null => {
   try {
     const urlParts = url.split('?');
@@ -162,10 +217,10 @@ export const extractTokenFromUrl = (url: string): TokenResponse | null => {
     const type = params.get('type');
 
     if (!token) return null;
-    
-    return { 
-      token, 
-      type: type || undefined 
+
+    return {
+      token,
+      type: type || undefined,
     };
   } catch (error) {
     console.error('Error extracting token from URL:', error);
@@ -173,13 +228,15 @@ export const extractTokenFromUrl = (url: string): TokenResponse | null => {
   }
 };
 
-export const processSocialAuthDeepLink = async (url: string): Promise<SocialAuthDeepLinkResult | null> => {
+export const processSocialAuthDeepLink = async (
+  url: string
+): Promise<SocialAuthDeepLinkResult | null> => {
   try {
     const tokenData = extractTokenFromUrl(url);
     if (!tokenData?.token) return null;
 
     let loginType: 'google' | 'facebook' | 'unknown' | undefined;
-    
+
     if (tokenData.type === 'google' || tokenData.type === 'facebook') {
       loginType = tokenData.type;
     } else {

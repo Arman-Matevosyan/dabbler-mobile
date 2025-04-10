@@ -10,8 +10,8 @@ import { WebView } from 'react-native-webview';
 
 export default function PaymentScreen() {
   const { data, isLoading } = useClientToken();
-  const token = data && data.length > 0 ? data[0].token : '';
-  const merchantId = data && data.length > 0 ? data[0].merchantId : '';
+  const token = data?.token ?? null;
+  const merchantId = data?.merchantId ?? null;
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { plan } = useLocalSearchParams<{ plan: string }>();
@@ -32,7 +32,7 @@ export default function PaymentScreen() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !merchantId && !token) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />

@@ -5,7 +5,8 @@ import { format } from 'date-fns';
 import { router } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Card from '../ui/Card';
 
 interface ClassCardProps {
   classItem: {
@@ -52,147 +53,128 @@ export const ClassCard: React.FC<ClassCardProps> = ({
     return `${startTime} - ${endTime} • ${hours} ${t('classes.hours')}`;
   };
 
-  const renderScheduledClass = () => (
-    <View style={[styles.classCard, { backgroundColor: colors.background }]}>
-      <Image
-        source={{ uri: coverUrl }}
-        style={styles.classImage}
-        resizeMode="cover"
-      />
-      <View style={styles.classContent}>
-        <View style={styles.classDetails}>
-          <Text style={[styles.classTitle, { color: colors.textPrimary }]}>
-            {classItem.name}
-          </Text>
-          <Text style={[styles.classTime, { color: colors.textSecondary }]}>
-            {getFormattedDateTime()}
-          </Text>
+  const handleClassPress = () => {
+    router.push({
+      pathname: '/(features)/classes/details/[id]',
+      params: {
+        id: classItem.id,
+        date: classItem.date,
+      },
+    });
+  };
 
-          <View style={styles.classDetailsContainer}>
-            <View style={styles.classDetail}>
-              <FontAwesome5 name="bolt" size={14} color={colors.orange} />
-              <Text
-                style={[
-                  styles.classDetailText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {classItem.venue.name}
-              </Text>
-            </View>
-
-            <View style={styles.classDetail}>
-              <FontAwesome5
-                name="user"
-                size={14}
-                color={colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.classDetailText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {classItem.instructorInfo}
-              </Text>
-            </View>
-
-            <View style={styles.classDetail}>
-              <FontAwesome5 name="tag" size={14} color={colors.textSecondary} />
-              <Text
-                style={[
-                  styles.classDetailText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {classItem.categories[0]}
-              </Text>
-            </View>
-
-            <Text style={[styles.spotsText, { color: colors.textSecondary }]}>
-              {spotsLeft}/{classItem.totalSpots} {t('classes.spotsLeft')}
-            </Text>
-          </View>
-        </View>
+  const renderFreeTag = () => {
+    if (!isFreeClass) return null;
+    
+    return (
+      <View style={[styles.freeTag, { backgroundColor: colors.tint }]}>
+        <Text style={styles.freeTagText}>{t('classes.free')}</Text>
       </View>
-    </View>
-  );
+    );
+  };
 
-  const renderUnscheduledClass = () => (
-    <View
-      style={[styles.unscheduledCard, { backgroundColor: colors.background }]}
-    >
-      <Image
-        source={{ uri: coverUrl }}
-        style={styles.classImage}
-        resizeMode="cover"
-      />
-      <View style={styles.unscheduledContent}>
-        <Text style={[styles.unscheduledTitle, { color: colors.textPrimary }]}>
-          {classItem.name}
-        </Text>
-        <Text style={[styles.unscheduledTime, { color: colors.textSecondary }]}>
-          {getFormattedDateTime()}
-        </Text>
-        <Text
-          style={[styles.unscheduledVenue, { color: colors.textSecondary }]}
-        >
-          {classItem.venue.name}
-        </Text>
-        <View style={styles.unscheduledTag}>
-          <FontAwesome5 name="tag" size={12} color={colors.textSecondary} />
+  const renderScheduledClassContent = () => (
+    <View style={styles.classDetails}>
+      <Text style={[styles.classTitle, { color: colors.textPrimary }]}>
+        {classItem.name}
+      </Text>
+      <Text style={[styles.classTime, { color: colors.textSecondary }]}>
+        {getFormattedDateTime()}
+      </Text>
+
+      <View style={styles.classDetailsContainer}>
+        <View style={styles.classDetail}>
+          <FontAwesome5 name="bolt" size={14} color={colors.orange} />
           <Text
-            style={[styles.unscheduledTagText, { color: colors.textSecondary }]}
+            style={[
+              styles.classDetailText,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {classItem.venue.name}
+          </Text>
+        </View>
+
+        <View style={styles.classDetail}>
+          <FontAwesome5
+            name="user"
+            size={14}
+            color={colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.classDetailText,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {classItem.instructorInfo}
+          </Text>
+        </View>
+
+        <View style={styles.classDetail}>
+          <FontAwesome5 name="tag" size={14} color={colors.textSecondary} />
+          <Text
+            style={[
+              styles.classDetailText,
+              { color: colors.textSecondary },
+            ]}
           >
             {classItem.categories[0]}
           </Text>
         </View>
-        {isFreeClass && (
-          <View style={[styles.freeTag, { backgroundColor: colors.tint }]}>
-            <Text style={styles.freeTagText}>{t('classes.free')}</Text>
-          </View>
-        )}
+
+        <Text style={[styles.spotsText, { color: colors.textSecondary }]}>
+          {spotsLeft}/{classItem.totalSpots} {t('classes.spotsLeft')}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderUnscheduledClassContent = () => (
+    <View>
+      <Text style={[styles.unscheduledTitle, { color: colors.textPrimary }]}>
+        {classItem.name}
+      </Text>
+      <Text style={[styles.unscheduledTime, { color: colors.textSecondary }]}>
+        {getFormattedDateTime()}
+      </Text>
+      <Text
+        style={[styles.unscheduledVenue, { color: colors.textSecondary }]}
+      >
+        {classItem.venue.name}
+      </Text>
+      <View style={styles.unscheduledTag}>
+        <FontAwesome5 name="tag" size={12} color={colors.textSecondary} />
+        <Text
+          style={[styles.unscheduledTagText, { color: colors.textSecondary }]}
+        >
+          {classItem.categories[0]}
+        </Text>
       </View>
     </View>
   );
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() =>
-        router.push({
-          pathname: '/(features)/classes/details/[id]',
-          params: {
-            id: classItem.id,
-            date: classItem.date,
-          },
-        })
-      }
+    <Card 
+      imageUrl={coverUrl}
+      onPress={handleClassPress}
+      badge={isFreeClass ? renderFreeTag() : undefined}
+      style={classItem.scheduled ? styles.scheduledCard : styles.unscheduledCard}
     >
-      {classItem.scheduled ? renderScheduledClass() : renderUnscheduledClass()}
-    </TouchableOpacity>
+      {classItem.scheduled 
+        ? renderScheduledClassContent() 
+        : renderUnscheduledClassContent()
+      }
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  classCard: {
-    overflow: 'hidden',
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-    paddingBottom: 20,
-    marginBottom: 20,
-    paddingTop: 20,
+  scheduledCard: {
+    // Specific styles for scheduled classes
   },
-  classImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    marginRight: 16,
-  },
-  classContent: {
-    flex: 1,
-    justifyContent: 'space-between',
+  unscheduledCard: {
+    // Specific styles for unscheduled classes
   },
   classDetails: {
     flex: 1,
@@ -229,20 +211,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     letterSpacing: -0.2,
   },
-  unscheduledCard: {
-    overflow: 'hidden',
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-    paddingBottom: 20,
-    marginBottom: 20,
-    paddingTop: 20,
-    marginTop: 'auto',
-  },
-  unscheduledContent: {
-    flex: 1,
-    marginLeft: 16,
-  },
   unscheduledTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -273,13 +241,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   freeTag: {
-    padding: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 4,
-    marginTop: 4,
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   freeTagText: {
-    fontSize: 14,
+    color: 'white',
+    fontSize: 12,
     fontWeight: '600',
-    letterSpacing: -0.2,
   },
 });

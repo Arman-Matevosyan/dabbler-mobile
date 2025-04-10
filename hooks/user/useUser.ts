@@ -1,6 +1,8 @@
-import { AuthQueryKeys, UserQueryKeys } from '@/constants/QueryKeys';
 import { UserAPI } from '@/services/api';
-import { invalidateAuthDependentQueries } from '@/services/query/queryClient';
+import {
+    createQueryKeys,
+    invalidateAuthDependentQueries,
+} from '@/services/query/queryClient';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback } from 'react';
@@ -35,7 +37,7 @@ export const useUser = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: [UserQueryKeys.userData],
+    queryKey: createQueryKeys.user.data(),
     queryFn: async () => {
       const userData = await UserAPI.getCurrentUser();
       if (!userData) {
@@ -63,12 +65,12 @@ export const useUser = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [UserQueryKeys.userData],
+        queryKey: createQueryKeys.user.data(),
         refetchType: 'all',
       });
 
       queryClient.invalidateQueries({
-        queryKey: [AuthQueryKeys.USER_AVATAR],
+        queryKey: createQueryKeys.auth.userAvatar(),
         refetchType: 'all',
       });
 
@@ -122,7 +124,7 @@ export const useUser = () => {
     mutationFn: () => UserAPI.verifyEmail(),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [UserQueryKeys.userData],
+        queryKey: createQueryKeys.user.data(),
       });
     },
   });

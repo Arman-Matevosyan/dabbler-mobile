@@ -93,6 +93,7 @@ export function useVenueSearch(params: SearchParams, isFocused: boolean) {
     enabled: isFocused && hasLocationParams,
     retry: 0,
     select: (data: IVenueResponse) => {
+      console.log(data.clusters, data.venues, '======DATA');
       const clusters = data.clusters || [];
       return {
         clusters: clusters

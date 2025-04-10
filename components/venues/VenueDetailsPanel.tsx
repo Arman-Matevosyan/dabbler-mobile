@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type { Venue } from './types';
+import { Venue } from './MapComponent';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -173,7 +173,7 @@ const VenueDetailsPanel: React.FC<VenueDetailsPanelProps> = memo(
   (prevProps, nextProps) => {
     return (
       prevProps.isLoading === nextProps.isLoading &&
-      prevProps.selectedVenue?.navId === nextProps.selectedVenue?.navId &&
+      prevProps.selectedVenue?.id === nextProps.selectedVenue?.id &&
       prevProps.slideAnim === nextProps.slideAnim &&
       prevProps.opacityAnim === nextProps.opacityAnim
     );

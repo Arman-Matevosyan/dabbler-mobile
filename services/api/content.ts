@@ -88,7 +88,6 @@ export const ContentAPI = {
     return response.data;
   },
 
-  // Class discovery endpoints
   discoverClassSearch: async (
     params: any
   ): Promise<IDiscoverClassSearchResponse> => {
@@ -103,7 +102,7 @@ export const ContentAPI = {
     params?: any
   ): Promise<IDiscoverVenueClassesResponse> => {
     const response = await axiosClient.get(`/content/classes/discover/venue`, {
-      params: { venueId, ...params },
+      params: { venue_id: venueId, ...params },
     });
     return response.data;
   },

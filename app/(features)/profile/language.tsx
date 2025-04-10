@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView, TouchableOpacity, View } from 'react-native';
 
-const LANGUAGE_STORAGE_KEY = '@app_language';
 
 export default function LanguageScreen() {
   const { styles, colors } = useProfileTabStyles();

@@ -103,7 +103,6 @@ const HeaderTabs = ({
   );
 };
 
-// Skeleton loading component
 const CheckinSkeleton = () => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
@@ -128,8 +127,60 @@ const CheckinSkeleton = () => {
           <View style={styles.detailsContainer}>
             <Skeleton width={150} height={18} style={{ marginBottom: 8 }} />
             <Skeleton width={180} height={14} style={{ marginBottom: 8 }} />
-            <Skeleton width={100} height={14} style={{ marginBottom: 8 }} />
-            <Skeleton width={120} height={14} />
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 6,
+              }}
+            >
+              <View
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.textSecondary,
+                  opacity: 0.3,
+                  marginRight: 6,
+                }}
+              />
+              <Skeleton width={100} height={14} />
+            </View>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 6,
+              }}
+            >
+              <View
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.textSecondary,
+                  opacity: 0.3,
+                  marginRight: 6,
+                }}
+              />
+              <Skeleton width={120} height={14} />
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.textSecondary,
+                  opacity: 0.3,
+                  marginRight: 6,
+                }}
+              />
+              <Skeleton width={150} height={14} />
+            </View>
           </View>
         </View>
       ))}
@@ -137,7 +188,6 @@ const CheckinSkeleton = () => {
   );
 };
 
-// Empty state component
 const EmptyState = () => {
   const { t } = useTranslation();
 

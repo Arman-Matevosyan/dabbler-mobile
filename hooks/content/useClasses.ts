@@ -51,7 +51,6 @@ export function useVenueClasses(params: any = {}) {
   });
 }
 
-// Discover class hooks
 export const useDiscoverClassSearch = (
   params: DiscoverClassSearchParams = {}
 ) => {

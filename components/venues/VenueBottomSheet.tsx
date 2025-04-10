@@ -1,11 +1,13 @@
+import Card from '@/components/ui/Card';
 import Skeleton from '@/components/ui/Skeleton';
+import SkeletonCard from '@/components/ui/SkeletonCard';
 import { Colors } from '@/constants/Colors';
 import { useTooltip } from '@/contexts/TooltipContext';
 import { useVenuesBottomSheet } from '@/hooks/content';
 import { useFavorites } from '@/hooks/favorites/useFavorites';
 import { useUser } from '@/hooks/user';
 import { useTheme } from '@/providers/ThemeContext';
-import { Venue } from '@/types/enums';
+import { IVenue } from '@/types/class.types';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import BottomSheet, {
   BottomSheetFlatList,
@@ -21,11 +23,16 @@ import React, {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
-interface ExtendedVenue extends Venue {
+interface ExtendedVenue extends IVenue {
   categories?: Array<{ name: string }>;
+  covers?: Array<{ url: string }>;
+  address?: {
+    city?: string;
+    district?: string;
+  };
 }
 
 interface VenueBottomSheetProps {
@@ -43,22 +50,7 @@ interface BottomSheetContentProps {
 }
 
 const VenueSkeletonItem = React.memo(() => {
-  const { colorScheme } = useTheme();
-  const colors = Colors[colorScheme];
-
-  return (
-    <View
-      style={[styles.skeletonContainer, { backgroundColor: colors.secondary }]}
-    >
-      <Skeleton style={styles.skeletonImage} />
-      <View style={styles.skeletonContent}>
-        <Skeleton style={styles.skeletonTitle} />
-        <Skeleton style={styles.skeletonSubtitle} />
-        <Skeleton style={styles.skeletonSubtitle} />
-        <Skeleton style={styles.skeletonButton} />
-      </View>
-    </View>
-  );
+  return <SkeletonCard type="venue" />;
 });
 
 interface RatingStarsProps {
@@ -209,38 +201,42 @@ const VenueCard = React.memo(
     }, [item, onPress]);
 
     return (
-      <TouchableOpacity
-        style={[styles.venueCard, { backgroundColor: colors.secondary }]}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.venueImage}
-          resizeMode="cover"
-        />
-        <FavoriteButton venue={item} />
-        <View style={styles.venueDetails}>
-          <Text style={[styles.venueName, { color: colors.textPrimary }]}>
-            {item.name}
-          </Text>
-          <Text
-            style={[styles.venueCategories, { color: colors.textSecondary }]}
-            numberOfLines={1}
-          >
-            {categoryText}
-          </Text>
-          <Text
-            style={[styles.venueLocation, { color: colors.textSecondary }]}
-            numberOfLines={1}
-          >
-            {locationText}
-          </Text>
-          <View style={styles.ratingRow}>
-            <RatingStars rating={rating} reviewCount={reviews} />
+      <>
+        <Card
+          imageUrl={imageUrl}
+          onPress={handlePress}
+          style={[styles.venueCard, { 
+            backgroundColor: colors.background,
+            borderBottomWidth: 0,
+            borderWidth: 0,
+            borderColor: 'transparent'
+          }]}
+          contentStyle={{ borderBottomWidth: 0 }}
+          badge={<FavoriteButton venue={item} />}
+        >
+          <View style={styles.venueDetails}>
+            <Text style={[styles.venueName, { color: colors.textPrimary }]}>
+              {item.name}
+            </Text>
+            <Text
+              style={[styles.venueCategories, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {categoryText}
+            </Text>
+            <Text
+              style={[styles.venueLocation, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {locationText}
+            </Text>
+            <View style={styles.ratingRow}>
+              <RatingStars rating={rating} reviewCount={reviews} />
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </Card>
+        <View style={[styles.separator, { backgroundColor: 'rgba(255, 255, 255, 0.15)', marginVertical: 16 }]} />
+      </>
     );
   }
 );
@@ -286,7 +282,7 @@ export const VenueBottomSheet = React.memo(
             style={[
               styles.header,
               {
-                backgroundColor: colors.primary,
+                backgroundColor: 'transparent',
                 borderBottomColor: colors.divider,
               },
             ]}
@@ -330,7 +326,7 @@ export const VenueBottomSheet = React.memo(
               <BottomSheetScrollView
                 contentContainerStyle={[
                   styles.contentContainer,
-                  { backgroundColor: colors.primary, height: 10 },
+                  { backgroundColor: 'transparent', height: 10 },
                 ]}
               >
                 <View style={{ height: 1 }} />
@@ -348,7 +344,7 @@ export const VenueBottomSheet = React.memo(
         handleComponent={renderHeader}
         backgroundStyle={[
           styles.bottomSheetBackground,
-          { backgroundColor: colors.primary },
+          { backgroundColor: colors.background },
         ]}
         onChange={setCurrentIndex}
         enablePanDownToClose={false}
@@ -409,7 +405,7 @@ const BottomSheetContent = React.memo(
           <BottomSheetScrollView
             contentContainerStyle={[
               styles.contentContainer,
-              { backgroundColor: colors.primary },
+              { backgroundColor: 'transparent' },
             ]}
           >
             {renderSkeletons()}
@@ -455,14 +451,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden',
+    position: 'relative',
   },
   skeletonImage: {
     width: '100%',
     height: 200,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   skeletonContent: {
-    padding: 12,
+    padding: 16,
   },
   skeletonTitle: {
     height: 20,
@@ -480,16 +477,17 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     marginTop: 8,
+    width: '30%',
   },
   venueCard: {
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: 0,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   venueImage: {
     width: '100%',
@@ -573,7 +571,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 30,
     position: 'absolute',
     bottom: 16,
     alignSelf: 'center',
@@ -592,5 +590,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     paddingHorizontal: 16,
+  },
+  separator: {
+    height: 1,
+    width: '100%',
   },
 });

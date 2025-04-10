@@ -1,13 +1,8 @@
 import { axiosClient } from '@/api';
-
-// Create a User interface if not already in @/types
-interface IUser {
-  userId: string;
-  [key: string]: any;
-}
+import { IUserProfile } from '@/types/user';
 
 export const UserAPI = {
-  getCurrentUser: async (): Promise<IUser | null> => {
+  getCurrentUser: async (): Promise<IUserProfile | null> => {
     try {
       const response = await axiosClient.get('/users/me');
 
@@ -23,7 +18,14 @@ export const UserAPI = {
         return null;
       }
 
-      return userData;
+      return {
+        userId: userData.userId,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        image: userData.image || userData.avatarUrl,
+        isVerified: userData.isVerified,
+      };
     } catch (error) {
       console.error('Error fetching current user:', error);
       throw error;
@@ -44,6 +46,16 @@ export const UserAPI = {
       return response.data;
     } catch (error) {
       console.error('Error uploading avatar:', error);
+      throw error;
+    }
+  },
+
+  updateProfile: async (profileData: Partial<IUserProfile>): Promise<IUserProfile> => {
+    try {
+      const response = await axiosClient.patch('/users/me', profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating profile:', error);
       throw error;
     }
   },

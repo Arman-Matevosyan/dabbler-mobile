@@ -92,24 +92,46 @@ export const ProfileSkeleton: React.FC = () => {
           />
         </View>
 
+        <ShimmerElement
+          width={180}
+          height={24}
+          style={{ alignSelf: 'center', marginBottom: 8 }}
+        />
+
+        <ShimmerElement
+          width={220}
+          height={16}
+          style={{ alignSelf: 'center', marginBottom: 16 }}
+        />
+
         <View
           style={[
             styles.planContainer,
             { backgroundColor: colors.cardBackground },
           ]}
         >
-          <ShimmerElement
-            width={100}
-            height={22}
-            style={{ alignSelf: 'center' }}
-          />
-        </View>
+          <ShimmerElement width={100} height={22} style={{ marginBottom: 8 }} />
 
-        <ShimmerElement width={150} height={20} style={{ marginTop: 12 }} />
+          <ShimmerElement width={180} height={16} />
+        </View>
       </View>
 
       <View style={styles.actionButtonsContainer}>
         <View style={styles.actionButtonsRow}>
+          <View
+            style={[
+              styles.actionButton,
+              { backgroundColor: colors.cardBackground },
+            ]}
+          >
+            <ShimmerElement
+              width={24}
+              height={24}
+              style={{ borderRadius: 12, marginBottom: 8 }}
+            />
+            <ShimmerElement width={60} height={14} />
+          </View>
+
           <View
             style={[
               styles.actionButton,
@@ -146,16 +168,60 @@ export const ProfileSkeleton: React.FC = () => {
           { backgroundColor: colors.cardBackground },
         ]}
       >
-        <ShimmerElement width="70%" height={16} style={{ marginBottom: 12 }} />
+        <ShimmerElement width={150} height={18} style={{ marginBottom: 16 }} />
 
-        <View style={styles.sectionContent}>
+        <View style={styles.scheduleItem}>
           <ShimmerElement
-            width="100%"
-            height={14}
-            style={{ marginBottom: 8 }}
+            width={80}
+            height={80}
+            style={{ borderRadius: 8, marginRight: 12 }}
           />
-          <ShimmerElement width="90%" height={14} style={{ marginBottom: 8 }} />
-          <ShimmerElement width="80%" height={14} />
+          <View style={styles.scheduleDetails}>
+            <ShimmerElement
+              width="80%"
+              height={16}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement
+              width="70%"
+              height={14}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement
+              width="60%"
+              height={14}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement width="50%" height={14} />
+          </View>
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+        <View style={styles.scheduleItem}>
+          <ShimmerElement
+            width={80}
+            height={80}
+            style={{ borderRadius: 8, marginRight: 12 }}
+          />
+          <View style={styles.scheduleDetails}>
+            <ShimmerElement
+              width="75%"
+              height={16}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement
+              width="65%"
+              height={14}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement
+              width="55%"
+              height={14}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement width="45%" height={14} />
+          </View>
         </View>
       </View>
     </View>
@@ -174,7 +240,7 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
     marginBottom: 24,
   },
   avatarContainer: {
@@ -190,19 +256,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 8,
     marginBottom: 12,
-    width: '80%',
+    width: '90%',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   actionButtonsContainer: {
     marginBottom: 24,
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
   },
   actionButton: {
-    width: '45%',
+    width: '31%',
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
@@ -212,8 +277,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
-  sectionContent: {
-    marginTop: 8,
+  scheduleItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  scheduleDetails: {
+    flex: 1,
+  },
+  divider: {
+    height: 1,
+    width: '100%',
+    marginVertical: 16,
   },
   skeletonBase: {
     width: '100%',

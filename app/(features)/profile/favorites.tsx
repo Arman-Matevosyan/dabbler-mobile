@@ -26,11 +26,56 @@ const VenueSkeletonItem = () => {
     <View style={[styles.skeletonItem, { backgroundColor: colors.secondary }]}>
       <Skeleton style={styles.skeletonImage} />
       <View style={styles.skeletonContent}>
-        <Skeleton style={{ height: 20, width: '50%', marginBottom: 8 }} />
-        <Skeleton style={{ height: 16, width: '40%', marginBottom: 8 }} />
-        <Skeleton style={{ height: 16, width: '80%', marginBottom: 4 }} />
-        <Skeleton style={{ height: 16, width: '70%' }} />
+        <Skeleton style={{ height: 20, width: '60%', marginBottom: 12 }} />
+
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 8,
+          }}
+        >
+          <View
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: colors.textSecondary,
+              opacity: 0.5,
+              marginRight: 8,
+            }}
+          />
+          <Skeleton style={{ height: 16, width: '70%' }} />
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: colors.textSecondary,
+              opacity: 0.5,
+              marginRight: 8,
+            }}
+          />
+          <Skeleton style={{ height: 16, width: '80%' }} />
+        </View>
       </View>
+
+      <View
+        style={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: 'white',
+          opacity: 0.7,
+          zIndex: 2,
+        }}
+      />
     </View>
   );
 };
@@ -45,9 +90,9 @@ const VenueCard = ({ item }: { item: IVenue }) => {
     ? `${item.address.city || ''} - ${item.address.district || ''}`
     : '';
 
-  const categoriesText = (item as any).categories 
-    ? Array.isArray((item as any).categories) 
-      ? (item as any).categories.join(', ') 
+  const categoriesText = (item as any).categories
+    ? Array.isArray((item as any).categories)
+      ? (item as any).categories.join(', ')
       : ''
     : '';
 

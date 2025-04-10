@@ -84,12 +84,51 @@ export const MySchedules = () => {
                     height={14}
                     style={{ marginBottom: 8 }}
                   />
-                  <Skeleton
-                    width={100}
-                    height={14}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Skeleton width={120} height={14} />
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 6,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        marginRight: 6,
+                        backgroundColor: '#CCCCCC',
+                        opacity: 0.5,
+                      }}
+                    />
+                    <Skeleton width={120} height={14} />
+
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        backgroundColor: '#CCCCCC',
+                        opacity: 0.5,
+                        marginLeft: 'auto',
+                      }}
+                    />
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        marginRight: 6,
+                        backgroundColor: '#CCCCCC',
+                        opacity: 0.5,
+                      }}
+                    />
+                    <Skeleton width={100} height={14} />
+                  </View>
                 </View>
               </View>
             ))}

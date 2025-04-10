@@ -9,9 +9,9 @@ interface ProfilePageSkeletonProps {
   itemCount?: number;
 }
 
-export const ProfilePageSkeleton: React.FC<ProfilePageSkeletonProps> = ({ 
+export const ProfilePageSkeleton: React.FC<ProfilePageSkeletonProps> = ({
   type = 'details',
-  itemCount = 4 
+  itemCount = 4,
 }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
@@ -81,98 +81,168 @@ export const ProfilePageSkeleton: React.FC<ProfilePageSkeletonProps> = ({
     );
   };
 
-  // Back button and title area
   const renderHeader = () => (
     <View>
       <View style={styles.backButtonContainer}>
         <ShimmerElement width={24} height={24} style={{ borderRadius: 12 }} />
         <ShimmerElement width={80} height={18} style={{ marginLeft: 8 }} />
       </View>
-      
-      <ShimmerElement width={180} height={28} style={{ marginTop: 16, marginBottom: 24 }} />
+
+      <ShimmerElement
+        width={180}
+        height={28}
+        style={{ marginTop: 16, marginBottom: 24 }}
+      />
     </View>
   );
 
   const renderDetailItems = () => {
-    return Array(itemCount).fill(0).map((_, index) => (
-      <View 
-        key={index} 
-        style={[
-          styles.detailItemContainer,
-          { borderBottomColor: colors.border, borderBottomWidth: 1, paddingBottom: 16 }
-        ]}
-      >
-        <View style={styles.detailItemRow}>
-          <ShimmerElement width={24} height={24} style={{ borderRadius: 4 }} />
-          <View style={{ marginLeft: 12 }}>
-            <ShimmerElement width={80} height={16} style={{ marginBottom: 8 }} />
-            <ShimmerElement width={120} height={14} />
+    return Array(itemCount)
+      .fill(0)
+      .map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.detailItemContainer,
+            {
+              borderBottomColor: colors.border,
+              borderBottomWidth: 1,
+              paddingBottom: 16,
+            },
+          ]}
+        >
+          <View style={styles.detailItemRow}>
+            <ShimmerElement
+              width={24}
+              height={24}
+              style={{ borderRadius: 4 }}
+            />
+            <View style={{ marginLeft: 12 }}>
+              <ShimmerElement
+                width={80}
+                height={16}
+                style={{ marginBottom: 8 }}
+              />
+              <ShimmerElement width={120} height={14} />
+            </View>
           </View>
         </View>
-      </View>
-    ));
+      ));
   };
 
   const renderPlanItems = () => {
-    return Array(3).fill(0).map((_, index) => (
-      <View 
-        key={index} 
-        style={[
-          styles.planItemContainer,
-          { backgroundColor: colors.cardBackground, marginBottom: 16 }
-        ]}
-      >
-        <View style={styles.planHeaderRow}>
-          <ShimmerElement width={100} height={20} />
-          <ShimmerElement width={80} height={20} style={{ borderRadius: 10 }} />
+    return Array(3)
+      .fill(0)
+      .map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.planItemContainer,
+            { backgroundColor: colors.cardBackground, marginBottom: 16 },
+          ]}
+        >
+          <View style={styles.planHeaderRow}>
+            <ShimmerElement width={100} height={20} />
+            <ShimmerElement
+              width={80}
+              height={20}
+              style={{ borderRadius: 10 }}
+            />
+          </View>
+
+          <View style={{ marginTop: 12 }}>
+            <ShimmerElement
+              width="90%"
+              height={14}
+              style={{ marginBottom: 8 }}
+            />
+            <ShimmerElement
+              width="80%"
+              height={14}
+              style={{ marginBottom: 8 }}
+            />
+          </View>
+
+          <View style={{ marginTop: 16, alignItems: 'center' }}>
+            <ShimmerElement
+              width={120}
+              height={40}
+              style={{ borderRadius: 20 }}
+            />
+          </View>
         </View>
-        
-        <View style={{ marginTop: 12 }}>
-          <ShimmerElement width="90%" height={14} style={{ marginBottom: 8 }} />
-          <ShimmerElement width="80%" height={14} style={{ marginBottom: 8 }} />
-        </View>
-        
-        <View style={{ marginTop: 16, alignItems: 'center' }}>
-          <ShimmerElement width={120} height={40} style={{ borderRadius: 20 }} />
-        </View>
-      </View>
-    ));
+      ));
   };
 
   const renderSettingsItems = () => {
-    return Array(itemCount).fill(0).map((_, index) => (
-      <View 
-        key={index} 
-        style={[
-          styles.settingItemContainer,
-          { backgroundColor: colors.cardBackground }
-        ]}
-      >
-        <View style={styles.settingItemRow}>
-          <ShimmerElement width={24} height={24} style={{ borderRadius: 4 }} />
-          <ShimmerElement width={150} height={16} style={{ marginLeft: 12 }} />
+    return Array(itemCount)
+      .fill(0)
+      .map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.settingItemContainer,
+            { backgroundColor: colors.cardBackground },
+          ]}
+        >
+          <View style={styles.settingItemRow}>
+            <ShimmerElement
+              width={24}
+              height={24}
+              style={{ borderRadius: 4 }}
+            />
+            <ShimmerElement
+              width={150}
+              height={16}
+              style={{ marginLeft: 12 }}
+            />
+          </View>
+          <ShimmerElement width={20} height={20} style={{ borderRadius: 10 }} />
         </View>
-        <ShimmerElement width={20} height={20} style={{ borderRadius: 10 }} />
-      </View>
-    ));
+      ));
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
-      
+
       {type === 'details' && renderDetailItems()}
       {type === 'settings' && renderSettingsItems()}
       {(type === 'plans' || type === 'membership') && renderPlanItems()}
       {type === 'payment' && (
-        <View style={[styles.paymentContainer, { backgroundColor: colors.cardBackground }]}>
-          <ShimmerElement width="60%" height={20} style={{ marginBottom: 24 }} />
-          <ShimmerElement width="100%" height={50} style={{ marginBottom: 16, borderRadius: 8 }} />
-          <ShimmerElement width="100%" height={50} style={{ marginBottom: 16, borderRadius: 8 }} />
-          <ShimmerElement width="100%" height={50} style={{ borderRadius: 8 }} />
-          
+        <View
+          style={[
+            styles.paymentContainer,
+            { backgroundColor: colors.cardBackground },
+          ]}
+        >
+          <ShimmerElement
+            width="60%"
+            height={20}
+            style={{ marginBottom: 24 }}
+          />
+          <ShimmerElement
+            width="100%"
+            height={50}
+            style={{ marginBottom: 16, borderRadius: 8 }}
+          />
+          <ShimmerElement
+            width="100%"
+            height={50}
+            style={{ marginBottom: 16, borderRadius: 8 }}
+          />
+          <ShimmerElement
+            width="100%"
+            height={50}
+            style={{ borderRadius: 8 }}
+          />
+
           <View style={{ marginTop: 32, alignItems: 'center' }}>
-            <ShimmerElement width={180} height={46} style={{ borderRadius: 23 }} />
+            <ShimmerElement
+              width={180}
+              height={46}
+              style={{ borderRadius: 23 }}
+            />
           </View>
         </View>
       )}
@@ -228,4 +298,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfilePageSkeleton; 
+export default ProfilePageSkeleton;

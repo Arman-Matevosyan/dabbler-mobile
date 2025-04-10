@@ -1,83 +1,103 @@
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Colors } from '@/constants/Colors';
+import NetInfo from '@react-native-community/netinfo';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { Animated, StyleSheet, Text } from 'react-native';
+import { useTheme } from './ThemeContext';
 
-// Define the context type
 interface NetworkContextType {
   isConnected: boolean | null;
   isInternetReachable: boolean | null;
-  refreshNetworkStatus: () => Promise<void>;
 }
 
-// Create the context with a default value
 const NetworkContext = createContext<NetworkContextType>({
   isConnected: null,
   isInternetReachable: null,
-  refreshNetworkStatus: async () => {},
 });
 
-// Custom hook to use the network context
 export const useNetwork = () => useContext(NetworkContext);
 
 interface NetworkProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) => {
-  const [networkState, setNetworkState] = useState<{
-    isConnected: boolean | null;
-    isInternetReachable: boolean | null;
-  }>({
-    isConnected: null,
-    isInternetReachable: null,
-  });
-
-  // Function to refresh network status manually
-  const refreshNetworkStatus = async () => {
-    try {
-      const state = await NetInfo.fetch();
-      setNetworkState({
-        isConnected: state.isConnected,
-        isInternetReachable: state.isInternetReachable,
-      });
-    } catch (error) {
-      console.error('Error fetching network state:', error);
-    }
-  };
-
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [isInternetReachable, setIsInternetReachable] = useState<boolean | null>(null);
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const { colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
+  
+  const bannerPosition = new Animated.Value(-50);
+  
   useEffect(() => {
-    // Set up the initial network state
-    refreshNetworkStatus();
-
-    // Subscribe to network state changes
-    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
-      setNetworkState({
-        isConnected: state.isConnected,
-        isInternetReachable: state.isInternetReachable,
-      });
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected);
+      setIsInternetReachable(state.isInternetReachable);
       
-      // Log network status changes
-      console.log('Network status changed:', {
-        isConnected: state.isConnected,
-        isInternetReachable: state.isInternetReachable,
-      });
+      const shouldShowBanner = !(state.isConnected && state.isInternetReachable);
+      setBannerVisible(shouldShowBanner);
     });
-
-    // Clean up the subscription
+    
+    NetInfo.fetch().then(state => {
+      setIsConnected(state.isConnected);
+      setIsInternetReachable(state.isInternetReachable);
+    });
+    
     return () => {
       unsubscribe();
     };
   }, []);
+  
+  useEffect(() => {
+    Animated.timing(bannerPosition, {
+      toValue: bannerVisible ? 0 : -50,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [bannerVisible, bannerPosition]);
 
   return (
     <NetworkContext.Provider
       value={{
-        ...networkState,
-        refreshNetworkStatus,
+        isConnected,
+        isInternetReachable,
       }}
     >
+      <Animated.View
+        style={[
+          styles.banner,
+          { 
+            backgroundColor: colors.errorBackground || '#ff3b30',
+            transform: [{ translateY: bannerPosition }],
+          },
+        ]}
+      >
+        <Text style={styles.bannerText}>
+          No internet connection
+        </Text>
+      </Animated.View>
+
       {children}
     </NetworkContext.Provider>
   );
 };
+
+const styles = StyleSheet.create({
+  banner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  bannerText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+});
 
 export default NetworkProvider; 

@@ -21,7 +21,48 @@ import MapView, { PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import ClusterMarker from './ClusterMarker';
 import VenueDetailsPanel from './VenueDetailsPanel';
 import VenueMarker from './VenueMarker';
-import type { Cluster, MapComponentProps, Venue } from './types';
+
+export interface Venue {
+  id: string;
+  name: string;
+  description?: string;
+  location: {
+    coordinates: number[];
+    type: string;
+  };
+  address: {
+    addressLine2?: string;
+    city?: string;
+    country?: string;
+    district?: string;
+    houseNumber?: string;
+    landmark?: string;
+    postalCode?: string;
+    stateOrProvince?: string;
+    street?: string;
+  };
+  covers: Array<{ url: string; name?: string }>;
+  categories?: string[] | Array<{ name: string }>;
+}
+
+export interface Cluster {
+  id?: string;
+  count: number;
+  center: {
+    latitude: number;
+    longitude: number;
+  };
+  venue?: Venue | null;
+}
+
+interface MapComponentProps {
+  onRegionChange: (region: Region, radius: number) => void;
+  venues?: Venue[];
+  clusters?: Cluster[];
+  initialRegion?: Partial<Region>;
+  showUserLocation?: boolean;
+  onMapReady?: () => void;
+}
 
 if (
   Platform.OS === 'android' &&
@@ -32,13 +73,10 @@ if (
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Function to handle clusters with single venues
 const processMapData = (venues: Venue[] = [], clusters: Cluster[] = []) => {
-  // Convert clusters with count=1 to venues
   const processedVenues = [...venues];
   const processedClusters = clusters.filter((cluster) => {
     if (cluster.count === 1 && cluster.venue) {
-      // Add the venue from this cluster to venues list
       processedVenues.push(cluster.venue);
       return false;
     }
@@ -50,6 +88,55 @@ const processMapData = (venues: Venue[] = [], clusters: Cluster[] = []) => {
     clusters: processedClusters,
   };
 };
+
+const VenueMarkerMemo = memo(
+  ({
+    venue,
+    isSelected,
+    onPress,
+    colorScheme,
+  }: {
+    venue: Venue;
+    isSelected: boolean;
+    onPress: (venue: Venue) => void;
+    colorScheme: 'light' | 'dark';
+  }) => (
+    <VenueMarker
+      key={venue.id}
+      venue={venue}
+      isSelected={isSelected}
+      onPress={onPress}
+      colorScheme={colorScheme}
+    />
+  ),
+  (prev, next) =>
+    prev.venue.id === next.venue.id &&
+    prev.isSelected === next.isSelected &&
+    prev.colorScheme === next.colorScheme
+);
+
+const ClusterMarkerMemo = memo(
+  ({
+    cluster,
+    onPress,
+    colorScheme,
+  }: {
+    cluster: Cluster;
+    onPress: () => void;
+    colorScheme: 'light' | 'dark';
+  }) => (
+    <ClusterMarker
+      key={cluster.id}
+      cluster={cluster}
+      onPress={onPress}
+      colorScheme={colorScheme}
+    />
+  ),
+  (prev, next) =>
+    prev.cluster.id === next.cluster.id &&
+    prev.cluster.count === next.cluster.count &&
+    prev.colorScheme === next.colorScheme
+);
 
 const MapComponent: React.FC<MapComponentProps> = memo(
   ({
@@ -63,25 +150,35 @@ const MapComponent: React.FC<MapComponentProps> = memo(
     const { colorScheme } = useTheme();
     const mapRef = useRef<MapView>(null);
     const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+    const isRegionChanging = useRef(false);
+    const regionChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Ensure initialRegion has proper defaults for delta values
-    const defaultRegion: Region = {
-      latitude: initialRegion?.latitude ?? 0,
-      longitude: initialRegion?.longitude ?? 0,
-      latitudeDelta: initialRegion?.latitudeDelta ?? 0.02,
-      longitudeDelta: initialRegion?.longitudeDelta ?? 0.02,
-    };
+    const defaultRegion: Region = useMemo(
+      () => ({
+        latitude: initialRegion?.latitude ?? 0,
+        longitude: initialRegion?.longitude ?? 0,
+        latitudeDelta: initialRegion?.latitudeDelta ?? 0.02,
+        longitudeDelta: initialRegion?.longitudeDelta ?? 0.02,
+      }),
+      [initialRegion]
+    );
 
     const currentRegion = useRef(defaultRegion);
     const slideAnim = useRef(new Animated.Value(0)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
-    const isRegionChanging = useRef(false);
 
-    // Keep reference to previous venues and clusters to prevent flickering
     const prevVenues = useRef<Venue[]>([]);
     const prevClusters = useRef<Cluster[]>([]);
 
-    // Setup custom layout animation for markers
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (regionChangeTimeoutRef.current) {
+          clearTimeout(regionChangeTimeoutRef.current);
+        }
+      };
+    }, []);
+
     const configureMarkerAnimation = useCallback(() => {
       LayoutAnimation.configureNext({
         duration: 300,
@@ -100,15 +197,12 @@ const MapComponent: React.FC<MapComponentProps> = memo(
       });
     }, []);
 
-    // Handle map ready event
     const handleMapReady = useCallback(() => {
-      // Call the onMapReady prop if provided
       if (onMapReady) {
         onMapReady();
       }
     }, [onMapReady]);
 
-    // Use stable IDs for venue keys
     const getVenueKey = useCallback((venue: Venue) => `venue-${venue.id}`, []);
 
     useEffect(() => {
@@ -125,35 +219,24 @@ const MapComponent: React.FC<MapComponentProps> = memo(
       ]).start();
     }, [selectedVenue, slideAnim, opacityAnim]);
 
-    // Use stable IDs for cluster keys
     const getClusterKey = useCallback(
       (cluster: Cluster) => `cluster-${cluster.id}-${cluster.count}`,
       []
     );
 
-    // Process map data to handle single-venue clusters
     const { venues: processedVenues, clusters: processedClusters } = useMemo(
       () => processMapData(venues, clusters),
       [venues, clusters]
     );
 
-    // Update references for previous data to ensure smooth transitions
     useEffect(() => {
-      // Only update refs if we have valid data and aren't currently changing the region
       if (processedVenues.length > 0 || processedClusters.length > 0) {
-        setTimeout(() => {
-          prevVenues.current = processedVenues;
-          prevClusters.current = processedClusters;
-          // Apply layout animation when markers update
-          configureMarkerAnimation();
-        }, 0);
+        prevVenues.current = processedVenues;
+        prevClusters.current = processedClusters;
       }
-    }, [processedVenues, processedClusters, configureMarkerAnimation]);
+    }, [processedVenues, processedClusters]);
 
-    // Filter out invalid coordinates
     const { validVenues, validClusters } = useMemo(() => {
-      // If we're in the middle of a region change and have no new data,
-      // use the previous data to avoid flicker
       const venuesToUse =
         processedVenues.length === 0 && isRegionChanging.current
           ? prevVenues.current
@@ -185,14 +268,25 @@ const MapComponent: React.FC<MapComponentProps> = memo(
 
     const handleRegionChangeStart = useCallback(() => {
       isRegionChanging.current = true;
+
+      if (regionChangeTimeoutRef.current) {
+        clearTimeout(regionChangeTimeoutRef.current);
+      }
     }, []);
 
-    const handleRegionChange = useCallback(
+    const handleRegionChangeComplete = useCallback(
       (region: Region) => {
         currentRegion.current = region;
         const radius = calculateRadius(region);
-        isRegionChanging.current = false;
-        onRegionChange(region, radius);
+
+        if (regionChangeTimeoutRef.current) {
+          clearTimeout(regionChangeTimeoutRef.current);
+        }
+
+        regionChangeTimeoutRef.current = setTimeout(() => {
+          isRegionChanging.current = false;
+          onRegionChange(region, radius);
+        }, 200);
       },
       [onRegionChange]
     );
@@ -209,10 +303,8 @@ const MapComponent: React.FC<MapComponentProps> = memo(
 
     const handleClusterPress = useCallback(
       (cluster: Cluster) => {
-        // Provide immediate visual feedback
         configureMarkerAnimation();
 
-        // Zoom in to the cluster region
         if (mapRef.current) {
           const region: Region = {
             latitude: cluster.center.latitude,
@@ -226,6 +318,33 @@ const MapComponent: React.FC<MapComponentProps> = memo(
       [configureMarkerAnimation]
     );
 
+    const venueMarkers = useMemo(
+      () =>
+        validVenues.map((venue) => (
+          <VenueMarkerMemo
+            key={getVenueKey(venue)}
+            venue={venue}
+            isSelected={selectedVenue?.id === venue.id}
+            onPress={handleVenuePress}
+            colorScheme={colorScheme}
+          />
+        )),
+      [validVenues, selectedVenue, colorScheme, handleVenuePress, getVenueKey]
+    );
+
+    const clusterMarkers = useMemo(
+      () =>
+        validClusters.map((cluster) => (
+          <ClusterMarkerMemo
+            key={getClusterKey(cluster)}
+            cluster={cluster}
+            onPress={() => handleClusterPress(cluster)}
+            colorScheme={colorScheme}
+          />
+        )),
+      [validClusters, colorScheme, handleClusterPress, getClusterKey]
+    );
+
     return (
       <View style={styles.container}>
         <MapView
@@ -234,40 +353,42 @@ const MapComponent: React.FC<MapComponentProps> = memo(
           customMapStyle={colorScheme === 'dark' ? darkMapStyle : lightMapStyle}
           provider={PROVIDER_GOOGLE}
           initialRegion={defaultRegion}
-          onRegionChangeComplete={handleRegionChange}
+          onRegionChangeComplete={handleRegionChangeComplete}
           onRegionChange={handleRegionChangeStart}
           onPress={() => setSelectedVenue(null)}
           showsUserLocation={showUserLocation}
           moveOnMarkerPress={false}
           onMapReady={handleMapReady}
         >
-          {validClusters.map((cluster) => (
-            <ClusterMarker
-              key={getClusterKey(cluster)}
-              cluster={cluster}
-              onPress={() => handleClusterPress(cluster)}
-              colorScheme={colorScheme}
-            />
-          ))}
-          {validVenues.map((venue) => (
-            <VenueMarker
-              key={getVenueKey(venue)}
-              venue={venue}
-              isSelected={selectedVenue?.id === venue.id}
-              onPress={handleVenuePress}
-              colorScheme={colorScheme}
-            />
-          ))}
+          {clusterMarkers}
+          {venueMarkers}
         </MapView>
 
-        {selectedVenue?.id && (
-          <VenueDetailsPanel
-            selectedVenue={selectedVenue}
-            isLoading={false}
-            slideAnim={slideAnim}
-            opacityAnim={opacityAnim}
-            onClose={() => setSelectedVenue(null)}
-          />
+        {selectedVenue && (
+          <Animated.View
+            style={[
+              styles.detailsPanelContainer,
+              {
+                transform: [
+                  {
+                    translateY: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [200, 0],
+                    }),
+                  },
+                ],
+                opacity: opacityAnim,
+              },
+            ]}
+          >
+            <VenueDetailsPanel
+              selectedVenue={selectedVenue}
+              isLoading={false}
+              onClose={() => setSelectedVenue(null)}
+              slideAnim={slideAnim}
+              opacityAnim={opacityAnim}
+            />
+          </Animated.View>
         )}
       </View>
     );
@@ -275,24 +396,28 @@ const MapComponent: React.FC<MapComponentProps> = memo(
 );
 
 const calculateRadius = (region: Region) => {
-  const circumference = 40075;
-  const oneDegreeInMeters = (circumference * 1000) / 360;
-  return (
-    Math.max(
-      region.latitudeDelta * oneDegreeInMeters,
-      region.longitudeDelta * oneDegreeInMeters
-    ) / 2
-  );
+  const { longitudeDelta } = region;
+  // Earth's circumference at the equator is about 40,075 kilometers
+  const metersPerDegree = 40075000 / 360;
+  return (longitudeDelta * metersPerDegree) / 2;
 };
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
     flex: 1,
+    position: 'relative',
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
+  },
+  detailsPanelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 999,
+    width: SCREEN_WIDTH,
   },
 });
 
-export default MapComponent;
+export default memo(MapComponent);

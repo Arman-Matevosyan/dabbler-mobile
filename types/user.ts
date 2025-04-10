@@ -5,4 +5,6 @@ export interface IUserProfile {
   email?: string;
   image?: string;
   isVerified?: boolean;
+  membershipStatus?: string;
+  avatarUrl?: string;
 }

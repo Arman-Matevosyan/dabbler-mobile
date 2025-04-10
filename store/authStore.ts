@@ -1,182 +1,102 @@
-import { AuthAPI, AuthResponse, UserAPI } from '@/services/api';
-import { User } from '@/types/types';
+import { IUserProfile } from '@/types/user';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-export interface AuthState {
-  user: User | null;
-  isLoading: boolean;
-  socialLoading: 'google' | 'facebook' | null;
+const secureStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return await SecureStore.getItemAsync(name);
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await SecureStore.setItemAsync(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await SecureStore.deleteItemAsync(name);
+  },
+};
+
+interface AuthState {
+  accessToken: string | null;
+  refreshToken: string | null;
+  tokenExpiry: number | null;
   isAuthenticated: boolean;
+  user: IUserProfile | null;
+  isLoading: boolean;
 
-  login: (email: string, password: string) => Promise<void>;
-  signup: (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string
-  ) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshTokens: () => Promise<boolean>;
-  setTokens: (accessToken: string, refreshToken?: string) => Promise<void>;
-  getAccessToken: () => Promise<string | null>;
-  getRefreshToken: () => Promise<string | null>;
-  handleSocialLogin: (
-    type: 'google' | 'facebook',
-    token?: string
-  ) => Promise<{ authUrl: string; callbackUrl: string } | AuthResponse | void>;
-  setSocialLoading: (provider: 'google' | 'facebook' | null) => void;
-  fetchUser: () => Promise<User | null>;
-  verifyEmail: () => Promise<void>;
+  setTokens: (accessToken: string, refreshToken: string, expiresIn?: number) => void;
+  setUser: (user: IUserProfile | null) => void;
+  setIsAuthenticated: (isAuthenticated: boolean) => void;
+  setIsLoading: (isLoading: boolean) => void;
+  logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  isLoading: false,
-  socialLoading: null,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      refreshToken: null,
+      tokenExpiry: null,
+      isAuthenticated: false,
+      user: null,
+      isLoading: false,
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
-    try {
-      const response = await AuthAPI.login(email, password);
-      await get().setTokens(response.accessToken, response.refreshToken);
-      await get().fetchUser();
-      set({ isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      setTokens: (accessToken, refreshToken, expiresIn) => set(() => {
+        const tokenExpiry = expiresIn 
+          ? Math.floor(Date.now() / 1000) + expiresIn 
+          : null;
+        
+        return { 
+          accessToken, 
+          refreshToken, 
+          tokenExpiry,
+          isAuthenticated: true 
+        };
+      }),
+
+      setUser: (user) => set(() => ({ user })),
+      
+      setIsAuthenticated: (isAuthenticated) => set(() => ({ isAuthenticated })),
+      
+      setIsLoading: (isLoading) => set(() => ({ isLoading })),
+      
+      logout: () => set(() => ({
+        accessToken: null,
+        refreshToken: null,
+        tokenExpiry: null,
+        isAuthenticated: false,
+        user: null,
+      })),
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => secureStorage),
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        tokenExpiry: state.tokenExpiry,
+        isAuthenticated: state.isAuthenticated,
+        user: state.user,
+      }),
     }
-  },
+  )
+);
 
-  signup: async (
-    email: string,
-    password: string,
-    firstName: string,
-    lastName: string
-  ) => {
-    set({ isLoading: true });
-    try {
-      const response = await AuthAPI.signup(
-        email,
-        password,
-        firstName,
-        lastName
-      );
-
-      await get().setTokens(response.accessToken, response.refreshToken);
-      await get().fetchUser();
-      await get().verifyEmail();
-      set({ isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
-
-  logout: async () => {
-    set({ isLoading: true });
-    try {
-      await AuthAPI.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
-      set({ user: null, isAuthenticated: false, isLoading: false });
-    }
-  },
-
-  setTokens: async (accessToken: string, refreshToken?: string) => {
-    await SecureStore.setItemAsync('accessToken', accessToken);
-    if (refreshToken) {
-      await SecureStore.setItemAsync('refreshToken', refreshToken);
-    }
-    set({ isAuthenticated: true });
-  },
-
-  getAccessToken: async () => {
-    return SecureStore.getItemAsync('accessToken');
-  },
-
-  getRefreshToken: async () => {
-    return SecureStore.getItemAsync('refreshToken');
-  },
-
-  refreshTokens: async () => {
-    try {
-      const refreshToken = await get().getRefreshToken();
-      if (!refreshToken) return false;
-
-      const response = await AuthAPI.refreshToken(refreshToken);
-      await get().setTokens(response.accessToken, response.refreshToken);
-      return true;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('refreshToken');
-      set({ user: null, isAuthenticated: false });
-      return false;
-    }
-  },
-
-  setSocialLoading: (provider) => {
-    set({ socialLoading: provider });
-  },
-
-  handleSocialLogin: async (type: 'google' | 'facebook', token?: string) => {
-    set({ socialLoading: type });
-
-    if (token) {
-      try {
-        const response = await AuthAPI.refreshToken(token);
-        await get().setTokens(response.accessToken, response.refreshToken);
-        await get().fetchUser();
-        set({ isAuthenticated: true, socialLoading: null });
-        return response;
-      } catch (error) {
-        set({ socialLoading: null });
-        throw error;
-      }
-    } else {
-      set({ socialLoading: null });
-      return {
-        authUrl:
-          type === 'google' ? AuthAPI.googleLogin() : AuthAPI.facebookLogin(),
-        callbackUrl: 'dabbler://auth',
-      };
-    }
-  },
-
-  fetchUser: async () => {
-    try {
-      const response = await UserAPI.getCurrentUser();
-      set({ user: response, isAuthenticated: true });
-      return response;
-    } catch (error) {
-      // If unauthorized, try to refresh the token
-      if (error instanceof Error) {
-        const anyError = error as any;
-        if (anyError.response?.status === 401) {
-          const refreshed = await get().refreshTokens();
-          if (refreshed) {
-            // Try fetching the user again after token refresh
-            return get().fetchUser();
-          }
-        }
-      }
-      set({ user: null, isAuthenticated: false });
-      return null;
-    }
-  },
-
-  verifyEmail: async () => {
-    await UserAPI.verifyEmail();
-  },
-}));
-
-// Initialize auth state
-export const initializeAuth = async () => {
-  const authStore = useAuthStore.getState();
-  await authStore.fetchUser();
+export const shouldRefreshToken = (): boolean => {
+  const tokenExpiry = useAuthStore.getState().tokenExpiry;
+  
+  if (!tokenExpiry) return false;
+  
+  const now = Math.floor(Date.now() / 1000);
+  
+  return tokenExpiry - now < 300;
 };
+
+export const isTokenExpired = (): boolean => {
+  const tokenExpiry = useAuthStore.getState().tokenExpiry;
+  
+  if (!tokenExpiry) return false;
+  
+  const now = Math.floor(Date.now() / 1000);
+  
+  return now >= tokenExpiry;
+}; 

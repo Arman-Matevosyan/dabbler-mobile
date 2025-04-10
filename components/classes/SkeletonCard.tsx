@@ -3,10 +3,10 @@ import { useTheme } from '@/providers/ThemeContext';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
+    useAnimatedStyle,
+    withRepeat,
+    withSequence,
+    withTiming,
 } from 'react-native-reanimated';
 
 interface SkeletonCardProps {
@@ -30,7 +30,7 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({ count = 3 }) => {
 
   const renderSkeleton = () => (
     <Animated.View
-      style={[styles.card, { backgroundColor: colors.background }, pulseAnim]}
+      style={[styles.card, { backgroundColor: 'transparent' }, pulseAnim]}
     >
       <View style={styles.imageContainer}>
         <View style={[styles.image, { backgroundColor: colors.border }]} />
@@ -39,9 +39,96 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({ count = 3 }) => {
         <View style={[styles.title, { backgroundColor: colors.border }]} />
         <View style={[styles.time, { backgroundColor: colors.border }]} />
         <View style={styles.details}>
-          <View style={[styles.detail, { backgroundColor: colors.border }]} />
-          <View style={[styles.detail, { backgroundColor: colors.border }]} />
-          <View style={[styles.detail, { backgroundColor: colors.border }]} />
+          <View
+            style={[
+              styles.locationRow,
+              { flexDirection: 'row', alignItems: 'center' },
+            ]}
+          >
+            <View
+              style={[
+                styles.locationIcon,
+                {
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.border,
+                  marginRight: 6,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.locationText,
+                {
+                  backgroundColor: colors.border,
+                  width: '60%',
+                  height: 14,
+                  borderRadius: 4,
+                },
+              ]}
+            />
+          </View>
+          <View
+            style={[
+              styles.instructorRow,
+              { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+            ]}
+          >
+            <View
+              style={[
+                styles.instructorIcon,
+                {
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.border,
+                  marginRight: 6,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.instructorText,
+                {
+                  backgroundColor: colors.border,
+                  width: '80%',
+                  height: 14,
+                  borderRadius: 4,
+                },
+              ]}
+            />
+          </View>
+          <View
+            style={[
+              styles.tagsRow,
+              { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+            ]}
+          >
+            <View
+              style={[
+                styles.tagIcon,
+                {
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  backgroundColor: colors.border,
+                  marginRight: 6,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.tagText,
+                {
+                  backgroundColor: colors.border,
+                  width: '70%',
+                  height: 14,
+                  borderRadius: 4,
+                },
+              ]}
+            />
+          </View>
         </View>
       </View>
     </Animated.View>
@@ -89,13 +176,20 @@ const styles = StyleSheet.create({
     height: 16,
     width: '40%',
     borderRadius: 4,
+    marginTop: 4,
+    marginBottom: 4,
   },
   details: {
     gap: 6,
-    marginTop: 4,
+    marginTop: 8,
   },
-  detail: {
-    height: 14,
-    borderRadius: 4,
-  },
+  locationRow: {},
+  locationIcon: {},
+  locationText: {},
+  instructorRow: {},
+  instructorIcon: {},
+  instructorText: {},
+  tagsRow: {},
+  tagIcon: {},
+  tagText: {},
 });

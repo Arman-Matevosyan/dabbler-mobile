@@ -1,14 +1,13 @@
 import { ThemedText } from '@/components/ui/ThemedText';
-import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useTheme } from '@/providers/ThemeContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  ActivityIndicator,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface SocialLoginButtonsProps {
@@ -19,8 +18,7 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
   containerStyle,
 }) => {
   const { colorScheme } = useTheme();
-  const colors = Colors[colorScheme];
-  const { handleSocialLogin, socialLoading } = useAuth();
+  const { startSocialLogin, socialLoading, socialLoginError } = useAuth();
 
   const styles = StyleSheet.create({
     container: {
@@ -46,39 +44,51 @@ export const SocialLoginButtons: React.FC<SocialLoginButtonsProps> = ({
     socialButtonText: {
       display: 'none',
     },
+    errorText: {
+      color: '#FF453A',
+      fontSize: 12,
+      textAlign: 'center',
+      marginTop: 8,
+    },
   });
 
   return (
-    <View style={[styles.container, containerStyle]}>
-      <TouchableOpacity
-        style={[styles.socialButton, styles.facebookButton]}
-        onPress={() => handleSocialLogin('facebook')}
-        disabled={socialLoading !== null}
-      >
-        {socialLoading === 'facebook' ? (
-          <ActivityIndicator color="white" size="small" />
-        ) : (
-          <>
-            <MaterialCommunityIcons name="facebook" size={18} color="white" />
-            <ThemedText style={styles.socialButtonText}>Facebook</ThemedText>
-          </>
-        )}
-      </TouchableOpacity>
+    <View>
+      <View style={[styles.container, containerStyle]}>
+        <TouchableOpacity
+          style={[styles.socialButton, styles.facebookButton]}
+          onPress={() => startSocialLogin('facebook')}
+          disabled={socialLoading !== null}
+        >
+          {socialLoading === 'facebook' ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="facebook" size={18} color="white" />
+              <ThemedText style={styles.socialButtonText}>Facebook</ThemedText>
+            </>
+          )}
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.socialButton, styles.googleButton]}
-        onPress={() => handleSocialLogin('google')}
-        disabled={socialLoading !== null}
-      >
-        {socialLoading === 'google' ? (
-          <ActivityIndicator color="white" size="small" />
-        ) : (
-          <>
-            <MaterialCommunityIcons name="google" size={18} color="white" />
-            <ThemedText style={styles.socialButtonText}>Google</ThemedText>
-          </>
-        )}
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.socialButton, styles.googleButton]}
+          onPress={() => startSocialLogin('google')}
+          disabled={socialLoading !== null}
+        >
+          {socialLoading === 'google' ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="google" size={18} color="white" />
+              <ThemedText style={styles.socialButtonText}>Google</ThemedText>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+      
+      {socialLoginError && (
+        <ThemedText style={styles.errorText}>{socialLoginError}</ThemedText>
+      )}
     </View>
   );
 };

@@ -1,6 +1,9 @@
+import { refreshToken } from '@/api/refreshToken';
+import { getCurrentLanguage } from '@/app/i18n';
 import { getBaseURL } from '@/constants/constants';
 import { showErrorTooltip } from '@/hooks/tooltip';
 import { invalidateAuthDependentQueries } from '@/services/query/queryClient';
+import { shouldRefreshToken, useAuthStore } from '@/store/authStore';
 import * as authUtils from '@/utils/authUtils';
 import axios, {
   AxiosError,
@@ -72,10 +75,28 @@ axiosClient.interceptors.request.use(
       return config;
     }
 
-    const accessToken = await authUtils.getAccessToken();
+    if (shouldRefreshToken() && !config._retry) {
+      try {
+        const refreshTokenValue = useAuthStore.getState().refreshToken;
+        if (refreshTokenValue) {
+          await refreshToken(refreshTokenValue);
+        }
+      } catch (error) {
+        console.error('Failed to refresh token on request:', error);
+      }
+    }
+
+    const accessToken = useAuthStore.getState().accessToken || await authUtils.getAccessToken();
+    
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+    
+    const currentLanguage = await getCurrentLanguage();
+    if (currentLanguage) {
+      config.headers['x-lang'] = currentLanguage;
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -120,30 +141,22 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await authUtils.getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token available');
+        const refreshTokenValue = useAuthStore.getState().refreshToken || await authUtils.getRefreshToken();
+        
+        if (!refreshTokenValue) throw new Error('No refresh token available');
 
-        const { data } = await axios.get(`${getBaseURL()}/auth/refresh`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${refreshToken}`,
-          },
-        });
-
-        if (!data?.accessToken) throw new Error('Invalid token response');
-
-        await authUtils.setTokens(data.accessToken, data.refreshToken);
+        const tokenResponse = await refreshToken(refreshTokenValue);
 
         axiosClient.defaults.headers.common[
           'Authorization'
-        ] = `Bearer ${data.accessToken}`;
+        ] = `Bearer ${tokenResponse.accessToken}`;
+        
         invalidateAuthDependentQueries();
-        processQueue(null, data.accessToken);
+        processQueue(null, tokenResponse.accessToken);
 
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${tokenResponse.accessToken}`;
         return axiosClient(originalRequest);
       } catch (refreshError) {
-        await authUtils.clearTokens();
         processQueue(refreshError as Error, null);
 
         if (!originalRequest?.skipErrorTooltip) {

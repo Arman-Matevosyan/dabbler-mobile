@@ -99,7 +99,9 @@ export default function UnauthenticatedProfile() {
                 />
               </View>
               <View style={styles.settingsItemTextContainer}>
-                <ThemedText style={styles.settingsItemText}>{t('auth.login')}</ThemedText>
+                <ThemedText style={styles.settingsItemText}>
+                  {t('auth.login')}
+                </ThemedText>
                 <ThemedText style={styles.settingsItemDescription}>
                   {t('auth.signInAccount')}
                 </ThemedText>
@@ -128,7 +130,9 @@ export default function UnauthenticatedProfile() {
                 />
               </View>
               <View style={styles.settingsItemTextContainer}>
-                <ThemedText style={styles.settingsItemText}>{t('auth.signUp')}</ThemedText>
+                <ThemedText style={styles.settingsItemText}>
+                  {t('auth.signUp')}
+                </ThemedText>
                 <ThemedText style={styles.settingsItemDescription}>
                   {t('auth.createAccount')}
                 </ThemedText>

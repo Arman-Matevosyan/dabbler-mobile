@@ -1,8 +1,8 @@
 import { MARKER_COLORS } from '@/constants/VenueColors';
-import React, { memo, useEffect, useMemo, useRef } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Marker } from 'react-native-maps';
-import { Cluster } from './types';
+import { Cluster } from './MapComponent';
 
 interface ClusterMarkerProps {
   cluster: Cluster;
@@ -14,8 +14,18 @@ const ClusterMarkerComponent: React.FC<ClusterMarkerProps> = memo(
   ({ cluster, colorScheme, onPress }) => {
     const scaleAnim = useRef(new Animated.Value(0.5)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
+    const [tracksViewChanges, setTracksViewChanges] = useState(true);
 
     useEffect(() => {
+      const timer = setTimeout(() => {
+        setTracksViewChanges(false);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+      setTracksViewChanges(true);
       Animated.parallel([
         Animated.timing(opacityAnim, {
           toValue: 1,
@@ -27,12 +37,14 @@ const ClusterMarkerComponent: React.FC<ClusterMarkerProps> = memo(
           friction: 6,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setTracksViewChanges(false);
+      });
     }, []);
 
-    // Handle press with animation
     const handlePress = () => {
-      // Quick feedback animation
+      setTracksViewChanges(true);
+
       Animated.sequence([
         Animated.timing(scaleAnim, {
           toValue: 1.1,
@@ -44,13 +56,13 @@ const ClusterMarkerComponent: React.FC<ClusterMarkerProps> = memo(
           friction: 4,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setTracksViewChanges(false);
+      });
 
-      // Call the original onPress handler
       onPress();
     };
 
-    // Use the new marker colors from VenueColors.ts
     const clusterStyles = useMemo(
       () => ({
         marker: {
@@ -62,14 +74,20 @@ const ClusterMarkerComponent: React.FC<ClusterMarkerProps> = memo(
       []
     );
 
+    const coordinate = useMemo(
+      () => ({
+        latitude: cluster.center.latitude,
+        longitude: cluster.center.longitude,
+      }),
+      [cluster.center.latitude, cluster.center.longitude]
+    );
+
     return (
       <Marker
-        coordinate={{
-          latitude: cluster.center.latitude,
-          longitude: cluster.center.longitude,
-        }}
+        coordinate={coordinate}
         zIndex={9999}
         onPress={handlePress}
+        tracksViewChanges={tracksViewChanges}
       >
         <Animated.View
           style={{

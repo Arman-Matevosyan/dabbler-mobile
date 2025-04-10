@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/auth/useAuth';
 import { SignupFormData, signupSchema } from '@/utils/validation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { router } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { Keyboard } from 'react-native';
 
@@ -13,13 +14,21 @@ export const useSignupForm = () => {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     Keyboard.dismiss();
-    signup({
-      email: data.signupEmail,
-      password: data.signupPassword,
-      firstName: data.firstName,
-      lastName: data.lastName,
-    });
-    form.reset();
+    try {
+      await signup({
+        email: data.signupEmail,
+        password: data.signupPassword,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+      form.reset();
+      router.replace({
+        pathname: '/(tabs)/profile/authenticated',
+        params: { fromAuth: 'true' },
+      });
+    } catch (error) {
+      console.error('Signup error:', error);
+    }
   });
 
   return {

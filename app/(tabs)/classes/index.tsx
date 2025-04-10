@@ -11,6 +11,7 @@ import {
   TimeRangeSlider,
 } from '@/components/classes';
 import { SearchWithCategories } from '@/components/shared';
+import { ThemedText } from '@/components/ui/ThemedText';
 import { Colors } from '@/constants/Colors';
 import { useDiscoverClassSearch } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
@@ -75,9 +76,9 @@ export default function ClassesScreen() {
 
   const classParams = useMemo(
     () => ({
-      locationLat,
-      locationLng,
-      radius,
+      latitude: locationLat,
+      longitude: locationLng,
+      distance: radius,
       query,
       category: category || [],
       from_date: from_date.toISOString(),
@@ -157,10 +158,50 @@ export default function ClassesScreen() {
   );
 
   const ListEmptyComponent = useMemo(() => {
-    if (isLoading) {
-      return <SkeletonCard count={5} />;
+    if (!classes.length && !isLoading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <ThemedText style={styles.emptyText}>
+            {t('classes.noClassesFound')}
+          </ThemedText>
+        </View>
+      );
     }
-  }, [isLoading, error, selectedDate, t]);
+    return null;
+  }, [classes.length, isLoading, t]);
+
+  if (isLoading && !classes.length) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.searchWrapper}>
+          <SearchWithCategories
+            searchValue={query}
+            onSearchChange={setQuery}
+            selectedCategories={category}
+            onCategoryToggle={setCategory}
+            placeholder={t('classes.searchClasses')}
+            isLoading={isLoading}
+          />
+        </View>
+
+        <TimeRangeSlider
+          timeRange={timeRange}
+          onTimeChange={(newRange) => setTimeRange(newRange)}
+          colors={colors}
+        />
+
+        <DateSelector
+          dates={dateRange}
+          selectedDate={selectedDate}
+          onDateSelect={(date) => setSelectedDate(date)}
+        />
+
+        <View style={styles.listContent}>
+          <SkeletonCard count={5} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -237,5 +278,16 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

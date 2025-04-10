@@ -1,12 +1,13 @@
 import { setupGlobalErrorHandling } from '@/api/errorInterceptor';
-import '@/app/i18n'; // Import i18n configuration
+import '@/app/i18n';
 import SplashScreen from '@/components/ui/SplashScreen';
 import { Colors } from '@/constants/Colors';
 import { TooltipProvider } from '@/contexts/TooltipContext';
+import { NetworkProvider } from '@/providers/NetworkProvider';
 import { QueryProvider } from '@/providers/QueryProvider';
 import {
-    ThemeProvider as CustomThemeProvider,
-    useTheme,
+  ThemeProvider as CustomThemeProvider,
+  useTheme,
 } from '@/providers/ThemeContext';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useFonts } from 'expo-font';
@@ -29,11 +30,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
         <CustomThemeProvider>
-          <TooltipProvider>
-            <BottomSheetModalProvider>
-              <RootLayoutNav />
-            </BottomSheetModalProvider>
-          </TooltipProvider>
+          <NetworkProvider>
+            <TooltipProvider>
+              <BottomSheetModalProvider>
+                <RootLayoutNav />
+              </BottomSheetModalProvider>
+            </TooltipProvider>
+          </NetworkProvider>
         </CustomThemeProvider>
       </QueryProvider>
     </GestureHandlerRootView>
@@ -50,21 +53,33 @@ function RootLayoutNav() {
   const colors = Colors[colorScheme];
 
   useEffect(() => {
-    if (loaded) {
-      ExpoSplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    async function prepare() {
+      try {
+        await ExpoSplashScreen.preventAutoHideAsync();
 
-  if (!loaded) return null;
+        setIsReady(true);
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    prepare();
+  }, []);
+
+  useEffect(() => {
+    if (loaded && isReady) {
+      ExpoSplashScreen.hideAsync().catch(console.warn);
+    }
+  }, [loaded, isReady]);
+
+  if (!loaded || !isReady) return null;
 
   return (
     <View
       style={[styles.rootContainer, { backgroundColor: colors.background }]}
     >
       {showSplash && (
-        <SplashScreen 
-          onAnimationComplete={() => setShowSplash(false)}
-        />
+        <SplashScreen onAnimationComplete={() => setShowSplash(false)} />
       )}
       <SafeAreaProvider>
         <View

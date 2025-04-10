@@ -1,13 +1,12 @@
 import { SearchWithCategories } from '@/components/shared';
-import MapComponent from '@/components/venues/MapComponent';
-import { Cluster, Venue } from '@/components/venues/types';
+import MapComponent, { Cluster, Venue } from '@/components/venues/MapComponent';
 import { VenueBottomSheet } from '@/components/venues/VenueBottomSheet';
 import { useVenueSearch } from '@/hooks/content';
 import useFetchUserLocation from '@/hooks/useFetchUserLocation';
 import {
-  useLocationParams,
-  useSearchStore,
-  useVenueSearchFilters,
+    useLocationParams,
+    useSearchStore,
+    useVenueSearchFilters,
 } from '@/store/useSearchStore';
 import { useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -203,7 +202,6 @@ export default function VenueTabScreen() {
           longitudeDelta: ARMENIA_REGION.longitudeDelta,
         }}
         showUserLocation
-        userLocation={userLocation}
         onMapReady={handleMapReady}
       />
 

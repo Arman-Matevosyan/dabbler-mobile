@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/images/rounded_logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#191E24"
+      "backgroundColor": "#121212"
     },
     "newArchEnabled": true,
     "runtimeVersion": {
@@ -54,8 +54,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#3B82F6"
+        "foregroundImage": "./assets/images/logo.png"
       },
       "config": {
         "googleMaps": {
@@ -120,10 +119,10 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/rounded_logo.png",
-          "imageWidth": 320,
-          "imageHeight": 320,
+          "imageWidth": 240,
+          "imageHeight": 240,
           "resizeMode": "contain",
-          "backgroundColor": "#191E24"
+          "backgroundColor": "#121212"
         }
       ],
       [

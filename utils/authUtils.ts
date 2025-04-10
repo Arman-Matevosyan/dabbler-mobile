@@ -1,4 +1,5 @@
 import { getBaseURL } from '@/constants/constants';
+import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
@@ -9,10 +10,21 @@ export const TOKENS_STORAGE_KEYS = {
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
+  const accessToken = useAuthStore.getState().accessToken;
+  if (accessToken) return accessToken;
+  
   try {
     const token = await SecureStore.getItemAsync(
       TOKENS_STORAGE_KEYS.ACCESS_TOKEN
     );
+    
+    if (token) {
+      const refreshToken = await getRefreshToken();
+      if (refreshToken) {
+        useAuthStore.getState().setTokens(token, refreshToken);
+      }
+    }
+    
     return token;
   } catch (error) {
     console.error('Error retrieving access token from storage:', error);
@@ -21,6 +33,9 @@ export const getAccessToken = async (): Promise<string | null> => {
 };
 
 export const getRefreshToken = async (): Promise<string | null> => {
+  const refreshToken = useAuthStore.getState().refreshToken;
+  if (refreshToken) return refreshToken;
+  
   try {
     const token = await SecureStore.getItemAsync(
       TOKENS_STORAGE_KEYS.REFRESH_TOKEN
@@ -34,9 +49,16 @@ export const getRefreshToken = async (): Promise<string | null> => {
 
 export const setTokens = async (
   accessToken: string,
-  refreshToken?: string
+  refreshToken?: string,
+  expiresIn?: number
 ): Promise<void> => {
   try {
+    useAuthStore.getState().setTokens(
+      accessToken, 
+      refreshToken || (await getRefreshToken()) || '',
+      expiresIn
+    );
+    
     await SecureStore.setItemAsync(
       TOKENS_STORAGE_KEYS.ACCESS_TOKEN,
       accessToken
@@ -55,6 +77,8 @@ export const setTokens = async (
 
 export const clearTokens = async (): Promise<void> => {
   try {
+    useAuthStore.getState().logout();
+    
     await SecureStore.deleteItemAsync(TOKENS_STORAGE_KEYS.ACCESS_TOKEN);
     await SecureStore.deleteItemAsync(TOKENS_STORAGE_KEYS.REFRESH_TOKEN);
     await SecureStore.deleteItemAsync(TOKENS_STORAGE_KEYS.AUTH_STATE);
@@ -64,12 +88,22 @@ export const clearTokens = async (): Promise<void> => {
 };
 
 export const checkAuthenticated = async (): Promise<boolean> => {
+  const isAuthenticated = useAuthStore.getState().isAuthenticated;
+  if (isAuthenticated) return true;
+  
   try {
     const token = await getAccessToken();
     const authState = await SecureStore.getItemAsync(
       TOKENS_STORAGE_KEYS.AUTH_STATE
     );
-    return !!token && authState === 'true';
+    
+    const isAuthFromOldStore = !!token && authState === 'true';
+    
+    if (isAuthFromOldStore && !isAuthenticated) {
+      useAuthStore.getState().setIsAuthenticated(true);
+    }
+    
+    return isAuthFromOldStore;
   } catch (error) {
     console.error('Error checking authentication state:', error);
     return false;
@@ -92,9 +126,12 @@ export const refreshTokens = async (): Promise<boolean> => {
     });
 
     if (response.data.accessToken) {
+      const expiresIn = response.data.expiresIn || null;
+      
       await setTokens(
         response.data.accessToken,
-        response.data.refreshToken || refreshToken
+        response.data.refreshToken || refreshToken,
+        expiresIn
       );
       return true;
     }

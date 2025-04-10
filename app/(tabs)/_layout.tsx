@@ -1,10 +1,13 @@
+import { useAuthStore } from '@/store/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
+import { useSubscriptions } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 
 const CustomTabBarButtonWithLabel = ({ children, style, onPress }: any) => (
@@ -20,6 +23,28 @@ const CustomTabBarButtonWithLabel = ({ children, style, onPress }: any) => (
 export default function TabLayout() {
   const { colorScheme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  const { data: subscription } = useSubscriptions();
+  const hasActivePlan = subscription && subscription.plan?.planId;
+
+  const protectedPaths = [
+    '/(tabs)/profile/authenticated',
+    '/(tabs)/classes',
+    '/(tabs)/checkin',
+  ];
+
+  const isProtectedPath = protectedPaths.some((path) =>
+    pathname.startsWith(path)
+  );
+
+  if (isProtectedPath && !isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   const renderVenuesIcon = ({ color }: { color: string }) => (
     <View style={styles.iconContainer}>
@@ -42,6 +67,9 @@ export default function TabLayout() {
   const renderProfileIcon = ({ color }: { color: string }) => (
     <View style={styles.iconContainer}>
       <MaterialCommunityIcons name="account-circle" size={24} color={color} />
+      {isAuthenticated && !hasActivePlan && (
+        <View style={styles.notificationBadge} />
+      )}
     </View>
   );
 
@@ -53,7 +81,8 @@ export default function TabLayout() {
         tabBarStyle: Platform.select({
           ios: {
             position: 'relative',
-            height: 70,
+            height: 70 + insets.bottom,
+            paddingBottom: insets.bottom,
             backgroundColor: Colors[colorScheme].background,
             borderTopWidth: 0.2,
             borderTopColor: '#ffffff',

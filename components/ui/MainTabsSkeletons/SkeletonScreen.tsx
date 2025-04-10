@@ -9,32 +9,27 @@ interface SkeletonScreenProps {
   fullScreen?: boolean;
 }
 
-/**
- * A wrapper component for skeleton loaders that provides consistent styling
- */
-const SkeletonScreen: React.FC<SkeletonScreenProps> = ({ 
-  children, 
-  fullScreen = true 
+const SkeletonScreen: React.FC<SkeletonScreenProps> = ({
+  children,
+  fullScreen = true,
 }) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme || 'dark'];
   const statusBarHeight = useStatusBarHeight();
-  
+
   return (
     <SafeAreaView
       style={[
         styles.container,
         { backgroundColor: colors.background },
-        fullScreen && { paddingTop: statusBarHeight }
+        fullScreen && { paddingTop: statusBarHeight },
       ]}
     >
       <StatusBar
         barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <View style={styles.content}>
-        {children}
-      </View>
+      <View style={styles.content}>{children}</View>
     </SafeAreaView>
   );
 };
@@ -48,4 +43,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SkeletonScreen; 
+export default SkeletonScreen;
