@@ -1,20 +1,21 @@
-import { refreshToken } from '@/api/refreshToken';
 import { getCurrentLanguage } from '@/app/i18n';
 import { getBaseURL } from '@/constants/constants';
 import { showErrorTooltip } from '@/hooks/tooltip';
+import { NavigationHandler } from '@/services/navigation/navigationHandler';
 import { invalidateAuthDependentQueries } from '@/services/query/queryClient';
 import { shouldRefreshToken, useAuthStore } from '@/store/authStore';
-import * as authUtils from '@/utils/authUtils';
 import axios, {
   AxiosError,
   AxiosInstance,
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
+import { Alert } from 'react-native';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
   skipErrorTooltip?: boolean;
+  skipAuthRefresh?: boolean;
 }
 
 type QueueItem = {
@@ -77,26 +78,22 @@ axiosClient.interceptors.request.use(
 
     if (shouldRefreshToken() && !config._retry) {
       try {
-        const refreshTokenValue = useAuthStore.getState().refreshToken;
-        if (refreshTokenValue) {
-          await refreshToken(refreshTokenValue);
-        }
+        await useAuthStore.getState().refreshTokens();
       } catch (error) {
         console.error('Failed to refresh token on request:', error);
       }
     }
 
-    const accessToken = useAuthStore.getState().accessToken || await authUtils.getAccessToken();
-    
+    const accessToken = useAuthStore.getState().accessToken;
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
-    
+
     const currentLanguage = await getCurrentLanguage();
     if (currentLanguage) {
       config.headers['x-lang'] = currentLanguage;
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -108,29 +105,19 @@ axiosClient.interceptors.response.use(
     const originalRequest = error.config as CustomAxiosRequestConfig;
 
     if (!error.response) {
-      console.error('Network error detected:', error.message);
-
-      if (
-        error.code === 'ECONNABORTED' &&
-        originalRequest &&
-        !originalRequest._retry
-      ) {
-        originalRequest._retry = true;
-        originalRequest.timeout = 45000;
-        return axiosClient(originalRequest);
-      }
-
       if (!originalRequest?.skipErrorTooltip) {
         showErrorTooltip(
-          new Error(
-            `Network error - Please check your connection (${error.message})`
-          )
+          new Error(`Network error - Please check your connection`)
         );
       }
       return Promise.reject(error);
     }
 
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (
+      error.response.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.skipAuthRefresh
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject, config: originalRequest });
@@ -141,27 +128,53 @@ axiosClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshTokenValue = useAuthStore.getState().refreshToken || await authUtils.getRefreshToken();
-        
-        if (!refreshTokenValue) throw new Error('No refresh token available');
+        const refreshTokenValue = useAuthStore.getState().refreshToken;
+        if (!refreshTokenValue) {
+          throw new Error('No refresh token available');
+        }
 
-        const tokenResponse = await refreshToken(refreshTokenValue);
+        const refreshed = await useAuthStore.getState().refreshTokens();
+        if (!refreshed) {
+          throw new Error('Token refresh failed');
+        }
+
+        const accessToken = useAuthStore.getState().accessToken;
+        if (!accessToken) {
+          throw new Error('Failed to get new access token');
+        }
 
         axiosClient.defaults.headers.common[
           'Authorization'
-        ] = `Bearer ${tokenResponse.accessToken}`;
-        
-        invalidateAuthDependentQueries();
-        processQueue(null, tokenResponse.accessToken);
+        ] = `Bearer ${accessToken}`;
 
-        originalRequest.headers.Authorization = `Bearer ${tokenResponse.accessToken}`;
+        invalidateAuthDependentQueries();
+
+        processQueue(null, accessToken);
+
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return axiosClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError as Error, null);
 
         if (!originalRequest?.skipErrorTooltip) {
-          showErrorTooltip(new Error('Session expired - Please login again'));
+          Alert.alert(
+            'Session Expired',
+            'Your session has expired. Please log in again to continue.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  NavigationHandler.navigateToLogin('Your session has expired');
+                },
+              },
+            ]
+          );
+        } else {
+          NavigationHandler.navigateToLogin();
         }
+
+        await useAuthStore.getState().logout();
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -169,9 +182,9 @@ axiosClient.interceptors.response.use(
     }
 
     if (!originalRequest?.skipErrorTooltip) {
-      if (error.response.status >= 500) {
+      if (error.response?.status >= 500) {
         showErrorTooltip(new Error('Server error - Please try again later'));
-      } else if (error.response.status !== 401) {
+      } else if (error.response?.status !== 401) {
         showErrorTooltip(error);
       }
     }

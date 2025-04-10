@@ -5,21 +5,21 @@ import { Colors } from '@/constants/Colors';
 import { useCheckIn } from '@/hooks/checkin/useCheckIn';
 import { useTheme } from '@/providers/ThemeContext';
 import {
-  Ionicons,
-  MaterialCommunityIcons,
-  MaterialIcons,
+    Ionicons,
+    MaterialCommunityIcons,
+    MaterialIcons,
 } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { router } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList,
-  Image,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  View,
+    FlatList,
+    Image,
+    Pressable,
+    StatusBar,
+    StyleSheet,
+    View,
 } from 'react-native';
 
 const HeaderBackButton = ({ onPress }: { onPress: () => void }) => {

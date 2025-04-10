@@ -4,34 +4,20 @@ import React, { ReactNode } from 'react';
 import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface CardProps {
-  /**
-   * Image URL to display in the card
-   */
   imageUrl?: string;
-  /**
-   * Optional callback when the card is pressed
-   */
+
   onPress?: () => void;
-  /**
-   * Custom component to render as a badge (like a free tag or favorite button)
-   */
+
   badge?: ReactNode;
-  /**
-   * Children to render inside the card content area
-   */
+
   children: ReactNode;
-  /**
-   * Allow customization of the card style
-   */
+
   style?: object;
-  /**
-   * Custom image style
-   */
+
   imageStyle?: object;
-  /**
-   * Custom content style
-   */
+
   contentStyle?: object;
+  onImageError?: () => void;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -42,6 +28,7 @@ export const Card: React.FC<CardProps> = ({
   style,
   imageStyle,
   contentStyle,
+  onImageError,
 }) => {
   const { colorScheme } = useTheme() || { colorScheme: 'dark' };
   const colors = Colors[colorScheme || 'dark'];
@@ -54,6 +41,10 @@ export const Card: React.FC<CardProps> = ({
             source={{ uri: imageUrl }}
             style={[styles.image, imageStyle]}
             resizeMode="cover"
+            onError={(e) => {
+              console.warn('Image loading error:', e.nativeEvent.error);
+              if (onImageError) onImageError();
+            }}
           />
           {badge && badge}
         </View>
@@ -64,10 +55,7 @@ export const Card: React.FC<CardProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onPress}
-      >
+      <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
         {renderCardContent()}
       </TouchableOpacity>
     );
@@ -107,4 +95,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Card; 
+export default Card;

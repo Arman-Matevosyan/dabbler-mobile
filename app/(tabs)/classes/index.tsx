@@ -5,10 +5,10 @@ import { StyleSheet, View } from 'react-native';
 import { FlatList } from 'react-native-gesture-handler';
 
 import {
-  ClassCard,
-  DateSelector,
-  SkeletonCard,
-  TimeRangeSlider,
+    ClassCard,
+    DateSelector,
+    SkeletonCard,
+    TimeRangeSlider,
 } from '@/components/classes';
 import { SearchWithCategories } from '@/components/shared';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -16,9 +16,9 @@ import { Colors } from '@/constants/Colors';
 import { useDiscoverClassSearch } from '@/hooks';
 import { useTheme } from '@/providers/ThemeContext';
 import {
-  useClassSearchFilters,
-  useLocationParams,
-  useSearchStore,
+    useClassSearchFilters,
+    useLocationParams,
+    useSearchStore,
 } from '@/store/useSearchStore';
 
 interface ClassItem {

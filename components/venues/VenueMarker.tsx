@@ -1,9 +1,17 @@
 import { Colors } from '@/constants/Colors';
 import { MARKER_COLORS, VENUE_COLORS } from '@/constants/VenueColors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import React, { memo, useEffect, useMemo, useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withSequence,
+    withSpring,
+    withTiming,
+} from 'react-native-reanimated';
 import { Venue } from './MapComponent';
 
 interface VenueMarkerProps {
@@ -16,67 +24,51 @@ interface VenueMarkerProps {
 const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
   ({ venue, isSelected, onPress, colorScheme }) => {
     const colors = Colors[colorScheme];
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const opacityAnim = useRef(new Animated.Value(1)).current;
-    const [tracksViewChanges, setTracksViewChanges] = useState(true);
+    const scale = useSharedValue(0.5);
+    const opacity = useSharedValue(0);
+    const [tracksViewChanges, setTracksViewChanges] = useState(false);
 
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        setTracksViewChanges(false);
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-      if (isSelected) {
-        setTracksViewChanges(true);
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.2,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1.1,
-            friction: 4,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          setTracksViewChanges(false);
-        });
-      } else {
-        setTracksViewChanges(true);
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 5,
-          useNativeDriver: true,
-        }).start(() => {
-          setTracksViewChanges(false);
-        });
-      }
-    }, [isSelected, scaleAnim]);
-
+    // Initial animation when marker appears
     useEffect(() => {
       setTracksViewChanges(true);
-      scaleAnim.setValue(0.5);
-      opacityAnim.setValue(0);
-
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: isSelected ? 1.1 : 1,
-          friction: 6,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setTracksViewChanges(false);
+      opacity.value = withTiming(1, { duration: 250 });
+      scale.value = withSpring(1, {
+        damping: 12,
+        stiffness: 100,
       });
-    }, []);
+      
+      const trackingTimeout = setTimeout(() => {
+        setTracksViewChanges(false);
+      }, 1000);
+      
+      return () => clearTimeout(trackingTimeout);
+    }, [venue.id]);
+
+    // Animation when marker is selected/deselected
+    useEffect(() => {
+      setTracksViewChanges(true);
+      
+      if (isSelected) {
+        scale.value = withSequence(
+          withTiming(1.2, { duration: 150 }),
+          withSpring(1.1, {
+            damping: 10,
+            stiffness: 100,
+          })
+        );
+      } else {
+        scale.value = withSpring(1, {
+          damping: 12,
+          stiffness: 100,
+        });
+      }
+      
+      const trackingTimeout = setTimeout(() => {
+        setTracksViewChanges(false);
+      }, 500);
+      
+      return () => clearTimeout(trackingTimeout);
+    }, [isSelected]);
 
     const getVenueTypeColor = (venue: Venue) => {
       // This function would determine the venue type more accurately
@@ -115,21 +107,21 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
 
     const handlePress = () => {
       setTracksViewChanges(true);
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.3,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: isSelected ? 1.1 : 1,
-          friction: 4,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
+      scale.value = withSequence(
+        withTiming(1.3, { duration: 100 }),
+        withDelay(
+          50,
+          withSpring(isSelected ? 1.1 : 1, {
+            damping: 10,
+            stiffness: 100,
+          })
+        )
+      );
+      
+      const trackingTimeout = setTimeout(() => {
         setTracksViewChanges(false);
-      });
-
+      }, 500);
+      
       onPress(venue);
     };
 
@@ -140,6 +132,13 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
       }),
       [venue.location.coordinates]
     );
+    
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        opacity: opacity.value,
+        transform: [{ scale: scale.value }],
+      };
+    });
 
     return (
       <Marker
@@ -149,12 +148,7 @@ const VenueMarkerComponent: React.FC<VenueMarkerProps> = memo(
         anchor={{ x: 0.5, y: 1 }}
         tracksViewChanges={tracksViewChanges}
       >
-        <Animated.View
-          style={{
-            transform: [{ scale: scaleAnim }],
-            opacity: opacityAnim,
-          }}
-        >
+        <Animated.View style={animatedStyle}>
           <MaterialCommunityIcons
             name="map-marker"
             size={36}

@@ -1,6 +1,4 @@
-import Card from '@/components/ui/Card';
 import Skeleton from '@/components/ui/Skeleton';
-import SkeletonCard from '@/components/ui/SkeletonCard';
 import { Colors } from '@/constants/Colors';
 import { useTooltip } from '@/contexts/TooltipContext';
 import { useVenuesBottomSheet } from '@/hooks/content';
@@ -13,7 +11,7 @@ import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { useIsFocused } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, {
   useCallback,
@@ -23,7 +21,14 @@ import React, {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  BackHandler,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 interface ExtendedVenue extends IVenue {
@@ -33,6 +38,9 @@ interface ExtendedVenue extends IVenue {
     city?: string;
     district?: string;
   };
+  isInPlan?: boolean;
+  isFavorite?: boolean;
+  description?: string;
 }
 
 interface VenueBottomSheetProps {
@@ -50,53 +58,60 @@ interface BottomSheetContentProps {
 }
 
 const VenueSkeletonItem = React.memo(() => {
-  return <SkeletonCard type="venue" />;
-});
-
-interface RatingStarsProps {
-  rating: number;
-  reviewCount: number;
-}
-
-const RatingStars = React.memo(({ rating, reviewCount }: RatingStarsProps) => {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  const { t } = useTranslation();
-
-  const filledStars = Math.floor(rating);
-  const hasHalfStar = rating - filledStars >= 0.5;
-  const emptyStars = 5 - filledStars - (hasHalfStar ? 1 : 0);
 
   return (
-    <>
-      <View style={styles.ratingContainer}>
-        {[...Array(filledStars)].map((_, i) => (
-          <Ionicons
-            key={`star-filled-${i}`}
-            name="star"
-            size={16}
-            color={colors.activePinColor}
+    <View
+      style={[
+        styles.skeletonContainer,
+        { borderRadius: 16, overflow: 'hidden' },
+      ]}
+    >
+      <View style={{ flexDirection: 'row', height: 130 }}>
+        <View style={styles.leftContainer}>
+          <Skeleton
+            style={[
+              styles.skeletonImage,
+              {
+                backgroundColor: colors.border,
+                width: 110,
+                height: '100%',
+                borderRadius: 0,
+              },
+            ]}
           />
-        ))}
-        {hasHalfStar && (
-          <Ionicons name="star-half" size={16} color={colors.activePinColor} />
-        )}
-        {[...Array(emptyStars)].map((_, i) => (
-          <Ionicons
-            key={`star-empty-${i}`}
-            name="star-outline"
-            size={16}
-            color={colors.activePinColor}
+        </View>
+        <View
+          style={[
+            styles.skeletonContent,
+            { flex: 1, justifyContent: 'center' },
+          ]}
+        >
+          <Skeleton
+            style={[styles.skeletonTitle, { backgroundColor: colors.border }]}
           />
-        ))}
-        <Text style={[styles.ratingValue, { color: colors.textPrimary }]}>
-          {rating.toFixed(1)}
-        </Text>
+          <Skeleton
+            style={[
+              styles.skeletonSubtitle,
+              { backgroundColor: colors.border },
+            ]}
+          />
+          <Skeleton
+            style={[
+              styles.skeletonSubtitle,
+              { backgroundColor: colors.border, width: '80%' },
+            ]}
+          />
+        </View>
       </View>
-      <Text style={[styles.reviewCount, { color: colors.textSecondary }]}>
-        ({reviewCount} {t('venues.reviews')})
-      </Text>
-    </>
+      <View
+        style={[
+          styles.separator,
+          { backgroundColor: 'rgba(255, 255, 255, 0.15)', marginVertical: 16 },
+        ]}
+      />
+    </View>
   );
 });
 
@@ -133,24 +148,12 @@ const FavoriteButton = React.memo(({ venue }: FavoriteButtonProps) => {
     >
       <Ionicons
         name={isFavorite ? 'heart' : 'heart-outline'}
-        size={24}
+        size={20}
         color={isFavorite ? '#FF3B30' : 'white'}
       />
     </TouchableOpacity>
   );
 });
-
-const venueRatings = new Map<string, { rating: number; reviews: number }>();
-
-const getVenueRating = (venueId: string) => {
-  if (!venueRatings.has(venueId)) {
-    venueRatings.set(venueId, {
-      rating: 3.5 + Math.random() * 1.5,
-      reviews: Math.floor(Math.random() * 60),
-    });
-  }
-  return venueRatings.get(venueId)!;
-};
 
 const VenueCard = React.memo(
   ({
@@ -164,18 +167,11 @@ const VenueCard = React.memo(
     const colors = Colors[colorScheme];
     const { t } = useTranslation();
 
-    const imageUrl = useMemo(() => {
-      if (item.covers && item.covers.length > 0 && item.covers[0].url) {
-        return item.covers[0].url;
-      }
-      return 'https://via.placeholder.com/300x200';
-    }, [item.covers]);
+    const [imageError, setImageError] = useState(false);
 
-    const categoryText = useMemo(() => {
-      if (!item.categories || item.categories.length === 0)
-        return t('venues.fitness');
-      return item.categories.map((c) => c.name).join(', ');
-    }, [item.categories, t]);
+    const hasImage =
+      item.covers && item.covers.length > 0 && item.covers[0]?.url;
+    const imageUrl = hasImage ? item.covers?.[0].url : undefined;
 
     const locationText = useMemo(() => {
       if (item.address) {
@@ -189,40 +185,62 @@ const VenueCard = React.memo(
       return '';
     }, [item.address]);
 
-    const { rating, reviews } = useMemo(
-      () => getVenueRating(item.id),
-      [item.id]
-    );
-
     const handlePress = useCallback(() => {
       if (onPress) {
         onPress(item);
       }
     }, [item, onPress]);
 
+    const handleImageError = useCallback(() => {
+      setImageError(true);
+    }, []);
+
     return (
       <>
-        <Card
-          imageUrl={imageUrl}
+        <TouchableOpacity
+          style={[
+            styles.venueCard,
+            {
+              backgroundColor: colors.background,
+              borderBottomWidth: 0,
+              borderWidth: 0,
+              borderColor: 'transparent',
+            },
+          ]}
           onPress={handlePress}
-          style={[styles.venueCard, { 
-            backgroundColor: colors.background,
-            borderBottomWidth: 0,
-            borderWidth: 0,
-            borderColor: 'transparent'
-          }]}
-          contentStyle={{ borderBottomWidth: 0 }}
-          badge={<FavoriteButton venue={item} />}
+          activeOpacity={0.8}
         >
+          <View style={styles.leftContainer}>
+            {hasImage && !imageError ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.venueImage}
+                resizeMode="cover"
+                onError={handleImageError}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.placeholderImage,
+                  { backgroundColor: colors.border },
+                ]}
+              >
+                <Ionicons
+                  name="image-outline"
+                  size={40}
+                  color={colors.textSecondary}
+                />
+              </View>
+            )}
+
+            <View style={styles.favoriteButtonContainer}>
+              <FavoriteButton venue={item} />
+            </View>
+          </View>
+
           <View style={styles.venueDetails}>
             <Text style={[styles.venueName, { color: colors.textPrimary }]}>
               {item.name}
-            </Text>
-            <Text
-              style={[styles.venueCategories, { color: colors.textSecondary }]}
-              numberOfLines={1}
-            >
-              {categoryText}
             </Text>
             <Text
               style={[styles.venueLocation, { color: colors.textSecondary }]}
@@ -230,12 +248,30 @@ const VenueCard = React.memo(
             >
               {locationText}
             </Text>
-            <View style={styles.ratingRow}>
-              <RatingStars rating={rating} reviewCount={reviews} />
-            </View>
+            {item.description && (
+              <Text
+                style={[
+                  styles.venueDescription,
+                  { color: colors.textSecondary },
+                ]}
+                numberOfLines={2}
+              >
+                {item.description.length > 100
+                  ? `${item.description.substring(0, 100)}...`
+                  : item.description}
+              </Text>
+            )}
           </View>
-        </Card>
-        <View style={[styles.separator, { backgroundColor: 'rgba(255, 255, 255, 0.15)', marginVertical: 16 }]} />
+        </TouchableOpacity>
+        <View
+          style={[
+            styles.separator,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              marginVertical: 16,
+            },
+          ]}
+        />
       </>
     );
   }
@@ -246,15 +282,50 @@ export const VenueBottomSheet = React.memo(
     onVenuePress,
     totalVenues,
     searchParams,
-    isLoading,
+    isLoading: externalIsLoading,
   }: VenueBottomSheetProps) => {
     const { colorScheme } = useTheme();
     const colors = Colors[colorScheme || 'dark'];
     const bottomSheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ['7%', '90%'], []);
+    const snapPoints = useMemo(() => ['7%', '92%'], []);
     const [currentIndex, setCurrentIndex] = useState(0);
     const isExpanded = currentIndex > 0;
     const { t } = useTranslation();
+    
+    // Track the data loading state to prevent accidental sheet position changes
+    const [isDataLoading, setIsDataLoading] = useState(false);
+    const isFocused = useIsFocused();
+    
+    // Prevent sheet position changes during data loading
+    const handleSheetChange = useCallback((index: number) => {
+      if (!isDataLoading) {
+        setCurrentIndex(index);
+      }
+    }, [isDataLoading]);
+    
+    // Expose a method to update the data loading state
+    const updateLoadingState = useCallback((loading: boolean) => {
+      setIsDataLoading(loading);
+    }, []);
+
+    useFocusEffect(
+      useCallback(() => {
+        const onBackPress = () => {
+          if (isExpanded) {
+            bottomSheetRef.current?.snapToIndex(0);
+            return true;
+          }
+          return false;
+        };
+
+        const subscription = BackHandler.addEventListener(
+          'hardwareBackPress',
+          onBackPress
+        );
+
+        return () => subscription.remove();
+      }, [isExpanded])
+    );
 
     const memoizedSearchParams = useMemo(
       () => searchParams,
@@ -282,14 +353,19 @@ export const VenueBottomSheet = React.memo(
             style={[
               styles.header,
               {
-                backgroundColor: 'transparent',
+                backgroundColor: colors.background,
                 borderBottomColor: colors.divider,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 1.5,
+                elevation: 2,
               },
             ]}
           >
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
             <View style={styles.headerContent}>
-              {isLoading ? (
+              {externalIsLoading ? (
                 <Skeleton style={styles.headerText} />
               ) : (
                 <Text
@@ -301,7 +377,7 @@ export const VenueBottomSheet = React.memo(
             </View>
           </View>
         ),
-      [totalVenues, colors, isLoading, t]
+      [totalVenues, colors, externalIsLoading, t]
     );
 
     const isExpandedRef = useRef(isExpanded);
@@ -310,31 +386,21 @@ export const VenueBottomSheet = React.memo(
     }, [isExpanded]);
 
     const renderContent = useMemo(
-      () => () =>
-        (
-          <View style={{ flex: 1 }}>
-            {isExpanded ? (
-              <BottomSheetContent
-                searchParams={memoizedSearchParams}
-                onVenuePress={handleVenuePress}
-                colors={colors}
-                goToIndex={(index: number) =>
-                  bottomSheetRef.current?.snapToIndex(index)
-                }
-              />
-            ) : (
-              <BottomSheetScrollView
-                contentContainerStyle={[
-                  styles.contentContainer,
-                  { backgroundColor: 'transparent', height: 10 },
-                ]}
-              >
-                <View style={{ height: 1 }} />
-              </BottomSheetScrollView>
-            )}
-          </View>
-        ),
-      [isExpanded, colors, handleVenuePress, memoizedSearchParams]
+      () => () => (
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <BottomSheetContent
+            searchParams={memoizedSearchParams}
+            onVenuePress={handleVenuePress}
+            colors={colors}
+            goToIndex={(index: number) =>
+              bottomSheetRef.current?.snapToIndex(index)
+            }
+            isExpanded={isExpanded}
+            updateLoadingState={updateLoadingState}
+          />
+        </View>
+      ),
+      [colors, handleVenuePress, memoizedSearchParams, isExpanded, updateLoadingState]
     );
 
     return (
@@ -346,10 +412,17 @@ export const VenueBottomSheet = React.memo(
           styles.bottomSheetBackground,
           { backgroundColor: colors.background },
         ]}
-        onChange={setCurrentIndex}
+        handleIndicatorStyle={{ display: 'none' }}
+        handleStyle={{
+          backgroundColor: colors.background,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+        }}
+        onChange={handleSheetChange}
         enablePanDownToClose={false}
         enableOverDrag={false}
         index={0}
+        topInset={40}
       >
         {renderContent()}
       </BottomSheet>
@@ -363,11 +436,21 @@ const BottomSheetContent = React.memo(
     onVenuePress,
     colors,
     goToIndex,
-  }: BottomSheetContentProps) => {
+    isExpanded,
+    updateLoadingState,
+  }: BottomSheetContentProps & { 
+    isExpanded: boolean;
+    updateLoadingState: (loading: boolean) => void;
+  }) => {
     const isFocused = useIsFocused();
     const { data, isLoading } = useVenuesBottomSheet(searchParams, isFocused);
     const { t } = useTranslation();
-
+    
+    // Notify parent component about loading state changes
+    useEffect(() => {
+      updateLoadingState(isLoading);
+    }, [isLoading, updateLoadingState]);
+    
     const renderVenueItem = useCallback(
       ({ item }: { item: ExtendedVenue }) => (
         <VenueCard key={item.id} item={item} onPress={onVenuePress} />
@@ -391,7 +474,7 @@ const BottomSheetContent = React.memo(
     const renderSkeletons = useCallback(
       () => (
         <Animated.View entering={FadeIn} exiting={FadeOut}>
-          {[1, 2, 3].map((key) => (
+          {[1, 2, 3, 4, 5, 6].map((key) => (
             <VenueSkeletonItem key={key} />
           ))}
         </Animated.View>
@@ -399,15 +482,32 @@ const BottomSheetContent = React.memo(
       []
     );
 
+    if (!isExpanded) {
+      // Render minimal content when collapsed
+      return (
+        <View style={{ flex: 1 }}>
+          <BottomSheetScrollView
+            contentContainerStyle={[
+              styles.contentContainer,
+              { backgroundColor: colors.background, height: 10 },
+            ]}
+          >
+            <View style={{ height: 1 }} />
+          </BottomSheetScrollView>
+        </View>
+      );
+    }
+
     return (
-      <>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         {isLoading ? (
           <BottomSheetScrollView
             contentContainerStyle={[
               styles.contentContainer,
-              { backgroundColor: 'transparent' },
+              { backgroundColor: colors.background, paddingTop: 24 },
             ]}
           >
+            <View style={{ height: 16 }} />
             {renderSkeletons()}
           </BottomSheetScrollView>
         ) : (
@@ -421,7 +521,9 @@ const BottomSheetContent = React.memo(
             windowSize={7}
             initialNumToRender={3}
             updateCellsBatchingPeriod={50}
-            ListFooterComponent={<View style={{ height: 60 }} />}
+            contentContainerStyle={{ paddingTop: 24, backgroundColor: colors.background }}
+            ListHeaderComponent={<View style={{ height: 16 }} />}
+            ListFooterComponent={<View style={{ height: 80 }} />}
           />
         )}
 
@@ -441,7 +543,7 @@ const BottomSheetContent = React.memo(
             <Text style={styles.mapViewText}>{t('venues.mapView')}</Text>
           </TouchableOpacity>
         </View>
-      </>
+      </View>
     );
   }
 );
@@ -449,17 +551,16 @@ const BottomSheetContent = React.memo(
 const styles = StyleSheet.create({
   skeletonContainer: {
     borderRadius: 12,
-    marginBottom: 16,
     overflow: 'hidden',
     position: 'relative',
   },
   skeletonImage: {
-    width: '100%',
-    height: 200,
+    width: 110,
+    height: '100%',
     marginBottom: 0,
   },
   skeletonContent: {
-    padding: 16,
+    padding: 12,
   },
   skeletonTitle: {
     height: 20,
@@ -470,7 +571,7 @@ const styles = StyleSheet.create({
   skeletonSubtitle: {
     height: 16,
     width: '50%',
-    marginBottom: 4,
+    marginBottom: 8,
     borderRadius: 4,
   },
   skeletonButton: {
@@ -480,7 +581,7 @@ const styles = StyleSheet.create({
     width: '30%',
   },
   venueCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 0,
     overflow: 'hidden',
     shadowColor: 'transparent',
@@ -488,51 +589,52 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     shadowRadius: 0,
     elevation: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    flexDirection: 'row',
+    height: 130,
   },
   venueImage: {
-    width: '100%',
-    height: 200,
+    width: 110,
+    height: '100%',
+    borderRadius: 0,
+    marginRight: 0,
   },
   venueDetails: {
-    padding: 16,
+    padding: 12,
+    justifyContent: 'center',
+    flex: 1,
   },
   venueName: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
   },
-  venueCategories: {
+  venueDescription: {
+    fontSize: 14,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  venueLocation: {
     fontSize: 14,
     marginBottom: 4,
   },
-  venueLocation: {
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingValue: {
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  reviewCount: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  favoriteButton: {
+  planBadge: {
     position: 'absolute',
     top: 12,
-    right: 12,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    left: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  favoriteButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
@@ -540,6 +642,8 @@ const styles = StyleSheet.create({
   header: {
     borderBottomWidth: 1,
     paddingBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    zIndex: 10,
   },
   handle: {
     width: 40,
@@ -560,6 +664,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 24,
   },
   emptyContainer: {
     flex: 1,
@@ -594,5 +699,25 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     width: '100%',
+  },
+  placeholderImage: {
+    width: 110,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 0,
+    marginRight: 0,
+  },
+  leftContainer: {
+    position: 'relative',
+    width: 110,
+    height: '100%',
+    overflow: 'hidden',
+  },
+  favoriteButtonContainer: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    zIndex: 2,
   },
 });

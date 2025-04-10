@@ -87,7 +87,6 @@ export const useSearchStore = create<SearchStore>((set) => ({
   updateSharedSearchParams: (updates) =>
     set((state) => {
       const newParams = { ...state.sharedSearchParams, ...updates };
-      // When updating shared params, also update venue and class params
       const newVenueParams = { ...state.venueSearchParams, ...updates };
       const newClassParams = { ...state.classSearchParams, ...updates };
 

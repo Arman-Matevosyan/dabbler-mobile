@@ -15,7 +15,7 @@ import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { LogBox, StyleSheet, View } from 'react-native';
+import { LogBox, Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -109,8 +109,9 @@ function RootLayoutNav() {
                 options={{
                   headerShown: false,
                   presentation: 'card',
-                  animation: 'fade',
-                  animationDuration: 50,
+                  animation:
+                    Platform.OS === 'ios' ? 'slide_from_right' : 'fade',
+                  animationDuration: 200,
                   gestureEnabled: true,
                   gestureDirection: 'horizontal',
                   fullScreenGestureEnabled: true,
@@ -120,8 +121,9 @@ function RootLayoutNav() {
                 name="(features)/venues"
                 options={{
                   headerShown: false,
-                  animation: 'fade',
-                  animationDuration: 50,
+                  animation:
+                    Platform.OS === 'ios' ? 'slide_from_right' : 'fade',
+                  animationDuration: 200,
                   gestureEnabled: true,
                   gestureDirection: 'horizontal',
                   fullScreenGestureEnabled: true,
@@ -131,10 +133,13 @@ function RootLayoutNav() {
                 name="(features)/payments"
                 options={{
                   headerShown: false,
-                  animation: 'slide_from_bottom',
-                  animationDuration: 50,
+                  animation:
+                    Platform.OS === 'ios'
+                      ? 'slide_from_bottom'
+                      : 'slide_from_bottom',
+                  animationDuration: 200,
                   gestureEnabled: true,
-                  gestureDirection: 'horizontal',
+                  gestureDirection: 'vertical',
                   fullScreenGestureEnabled: true,
                 }}
               />

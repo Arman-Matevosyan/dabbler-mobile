@@ -12,19 +12,19 @@ export const TOKENS_STORAGE_KEYS = {
 export const getAccessToken = async (): Promise<string | null> => {
   const accessToken = useAuthStore.getState().accessToken;
   if (accessToken) return accessToken;
-  
+
   try {
     const token = await SecureStore.getItemAsync(
       TOKENS_STORAGE_KEYS.ACCESS_TOKEN
     );
-    
+
     if (token) {
       const refreshToken = await getRefreshToken();
       if (refreshToken) {
         useAuthStore.getState().setTokens(token, refreshToken);
       }
     }
-    
+
     return token;
   } catch (error) {
     console.error('Error retrieving access token from storage:', error);
@@ -35,7 +35,7 @@ export const getAccessToken = async (): Promise<string | null> => {
 export const getRefreshToken = async (): Promise<string | null> => {
   const refreshToken = useAuthStore.getState().refreshToken;
   if (refreshToken) return refreshToken;
-  
+
   try {
     const token = await SecureStore.getItemAsync(
       TOKENS_STORAGE_KEYS.REFRESH_TOKEN
@@ -53,12 +53,14 @@ export const setTokens = async (
   expiresIn?: number
 ): Promise<void> => {
   try {
-    useAuthStore.getState().setTokens(
-      accessToken, 
-      refreshToken || (await getRefreshToken()) || '',
-      expiresIn
-    );
-    
+    useAuthStore
+      .getState()
+      .setTokens(
+        accessToken,
+        refreshToken || (await getRefreshToken()) || '',
+        expiresIn
+      );
+
     await SecureStore.setItemAsync(
       TOKENS_STORAGE_KEYS.ACCESS_TOKEN,
       accessToken
@@ -78,7 +80,7 @@ export const setTokens = async (
 export const clearTokens = async (): Promise<void> => {
   try {
     useAuthStore.getState().logout();
-    
+
     await SecureStore.deleteItemAsync(TOKENS_STORAGE_KEYS.ACCESS_TOKEN);
     await SecureStore.deleteItemAsync(TOKENS_STORAGE_KEYS.REFRESH_TOKEN);
     await SecureStore.deleteItemAsync(TOKENS_STORAGE_KEYS.AUTH_STATE);
@@ -90,19 +92,19 @@ export const clearTokens = async (): Promise<void> => {
 export const checkAuthenticated = async (): Promise<boolean> => {
   const isAuthenticated = useAuthStore.getState().isAuthenticated;
   if (isAuthenticated) return true;
-  
+
   try {
     const token = await getAccessToken();
     const authState = await SecureStore.getItemAsync(
       TOKENS_STORAGE_KEYS.AUTH_STATE
     );
-    
+
     const isAuthFromOldStore = !!token && authState === 'true';
-    
+
     if (isAuthFromOldStore && !isAuthenticated) {
       useAuthStore.getState().setIsAuthenticated(true);
     }
-    
+
     return isAuthFromOldStore;
   } catch (error) {
     console.error('Error checking authentication state:', error);
@@ -127,7 +129,7 @@ export const refreshTokens = async (): Promise<boolean> => {
 
     if (response.data.accessToken) {
       const expiresIn = response.data.expiresIn || null;
-      
+
       await setTokens(
         response.data.accessToken,
         response.data.refreshToken || refreshToken,
@@ -140,6 +142,28 @@ export const refreshTokens = async (): Promise<boolean> => {
   } catch (error) {
     console.error('Error refreshing tokens:', error);
     await clearTokens();
+    return false;
+  }
+};
+export const checkAndRefreshTokenIfNeeded = async (): Promise<boolean> => {
+  try {
+    const isAuthenticated = await checkAuthenticated();
+    if (!isAuthenticated) return false;
+
+    const tokenExpiry = useAuthStore.getState().tokenExpiry;
+    if (!tokenExpiry) return true;
+
+    const now = Math.floor(Date.now() / 1000);
+    const timeUntilExpiry = tokenExpiry - now;
+
+    if (timeUntilExpiry < 300) {
+      console.log('Token expires soon, refreshing...');
+      return await refreshTokens();
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in checkAndRefreshTokenIfNeeded:', error);
     return false;
   }
 };

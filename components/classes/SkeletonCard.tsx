@@ -1,9 +1,12 @@
 import { Colors } from '@/constants/Colors';
 import { useTheme } from '@/providers/ThemeContext';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
+    Easing,
+    LinearTransition,
     useAnimatedStyle,
+    useSharedValue,
     withRepeat,
     withSequence,
     withTiming,
@@ -13,183 +16,124 @@ interface SkeletonCardProps {
   count?: number;
 }
 
-export const SkeletonCard: React.FC<SkeletonCardProps> = ({ count = 3 }) => {
-  const { colorScheme } = useTheme() || { colorScheme: 'dark' };
-  const colors = Colors[colorScheme || 'dark'];
-
-  const pulseAnim = useAnimatedStyle(() => ({
-    opacity: withRepeat(
+const SkeletonCard: React.FC<SkeletonCardProps> = ({ count = 3 }) => {
+  const { colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
+  
+  const shimmerValue = useSharedValue(0);
+  
+  useEffect(() => {
+    shimmerValue.value = withRepeat(
       withSequence(
-        withTiming(0.3, { duration: 1000 }),
-        withTiming(0.7, { duration: 1000 })
+        withTiming(1, { duration: 750, easing: Easing.ease }),
+        withTiming(0, { duration: 750, easing: Easing.ease })
       ),
-      -1,
-      true
-    ),
-  }));
-
-  const renderSkeleton = () => (
-    <Animated.View
-      style={[styles.card, { backgroundColor: 'transparent' }, pulseAnim]}
-    >
-      <View style={styles.imageContainer}>
-        <View style={[styles.image, { backgroundColor: colors.border }]} />
-      </View>
-      <View style={styles.content}>
-        <View style={[styles.title, { backgroundColor: colors.border }]} />
-        <View style={[styles.time, { backgroundColor: colors.border }]} />
-        <View style={styles.details}>
-          <View
-            style={[
-              styles.locationRow,
-              { flexDirection: 'row', alignItems: 'center' },
-            ]}
-          >
-            <View
+      -1 // Infinite repetition
+    );
+  }, []);
+  
+  const shimmerStyle = useAnimatedStyle(() => {
+    return {
+      opacity: 0.7 + shimmerValue.value * 0.3,
+      transform: [{ scale: 1 + shimmerValue.value * 0.01 }],
+    };
+  });
+  
+  const renderSkeletonCards = () => {
+    const cards = [];
+    for (let i = 0; i < count; i++) {
+      cards.push(
+        <Animated.View 
+          key={i} 
+          style={[
+            styles.card, 
+            { backgroundColor: colors.secondary },
+            shimmerStyle
+          ]}
+          layout={LinearTransition.springify()}
+        >
+          <View style={styles.cardContent}>
+            <View 
               style={[
-                styles.locationIcon,
-                {
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: colors.border,
-                  marginRight: 6,
-                },
-              ]}
+                styles.image, 
+                { backgroundColor: colors.border }
+              ]} 
             />
-            <View
-              style={[
-                styles.locationText,
-                {
-                  backgroundColor: colors.border,
-                  width: '60%',
-                  height: 14,
-                  borderRadius: 4,
-                },
-              ]}
-            />
+            <View style={styles.details}>
+              <View 
+                style={[
+                  styles.title, 
+                  { backgroundColor: colors.border }
+                ]} 
+              />
+              <View 
+                style={[
+                  styles.subtitle, 
+                  { backgroundColor: colors.border }
+                ]} 
+              />
+              <View 
+                style={[
+                  styles.info, 
+                  { backgroundColor: colors.border }
+                ]} 
+              />
+            </View>
           </View>
-          <View
-            style={[
-              styles.instructorRow,
-              { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-            ]}
-          >
-            <View
-              style={[
-                styles.instructorIcon,
-                {
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: colors.border,
-                  marginRight: 6,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.instructorText,
-                {
-                  backgroundColor: colors.border,
-                  width: '80%',
-                  height: 14,
-                  borderRadius: 4,
-                },
-              ]}
-            />
-          </View>
-          <View
-            style={[
-              styles.tagsRow,
-              { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-            ]}
-          >
-            <View
-              style={[
-                styles.tagIcon,
-                {
-                  width: 14,
-                  height: 14,
-                  borderRadius: 7,
-                  backgroundColor: colors.border,
-                  marginRight: 6,
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.tagText,
-                {
-                  backgroundColor: colors.border,
-                  width: '70%',
-                  height: 14,
-                  borderRadius: 4,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      </View>
-    </Animated.View>
-  );
-
-  return (
-    <>
-      {Array.from({ length: count }).map((_, index) => (
-        <View key={index} style={styles.container}>
-          {renderSkeleton()}
-        </View>
-      ))}
-    </>
-  );
+        </Animated.View>
+      );
+    }
+    return cards;
+  };
+  
+  return <View style={styles.container}>{renderSkeletonCards()}</View>;
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    flex: 1,
+    padding: 16,
   },
   card: {
     borderRadius: 8,
-    flexDirection: 'row',
-    padding: 16,
-    overflow: 'hidden',
+    marginBottom: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  imageContainer: {
-    marginRight: 12,
+  cardContent: {
+    flexDirection: 'row',
   },
   image: {
-    width: 90,
-    height: 90,
-    borderRadius: 4,
-  },
-  content: {
-    flex: 1,
-    gap: 8,
-  },
-  title: {
-    height: 20,
-    width: '60%',
-    borderRadius: 4,
-  },
-  time: {
-    height: 16,
-    width: '40%',
-    borderRadius: 4,
-    marginTop: 4,
-    marginBottom: 4,
+    width: 80,
+    height: 80,
+    borderRadius: 6,
   },
   details: {
-    gap: 6,
-    marginTop: 8,
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'center',
   },
-  locationRow: {},
-  locationIcon: {},
-  locationText: {},
-  instructorRow: {},
-  instructorIcon: {},
-  instructorText: {},
-  tagsRow: {},
-  tagIcon: {},
-  tagText: {},
+  title: {
+    height: 16,
+    width: '80%',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  subtitle: {
+    height: 12,
+    width: '60%',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  info: {
+    height: 12,
+    width: '40%',
+    borderRadius: 4,
+  },
 });
+
+export default SkeletonCard;

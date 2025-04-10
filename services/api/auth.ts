@@ -1,5 +1,4 @@
 import { axiosClient } from '@/api';
-import { refreshToken as refreshTokenFunction } from '@/api/refreshToken';
 import { AuthQueryKeys } from '@/constants/QueryKeys';
 import { getBaseURL } from '@/constants/constants';
 import {
@@ -7,7 +6,7 @@ import {
   queryClient,
 } from '@/services/query/queryClient';
 import { useAuthStore } from '@/store/authStore';
-import * as authUtils from '@/utils/authUtils';
+import { useUserStore } from '@/store/userStore';
 import axios from 'axios';
 
 export interface AuthResponse {
@@ -38,6 +37,20 @@ export interface SocialAuthDeepLinkResult {
   loginType?: 'google' | 'facebook' | 'unknown';
 }
 
+const processAuthSuccess = async (response: AuthResponse): Promise<void> => {
+  useAuthStore
+    .getState()
+    .setTokens(response.accessToken, response.refreshToken, response.expiresIn);
+
+  useUserStore.getState().clearUser();
+
+  queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
+    isAuthenticated: true,
+  });
+
+  invalidateAuthDependentQueries();
+};
+
 export const AuthAPI = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     const response = await axiosClient.post('/auth/signin', {
@@ -45,20 +58,7 @@ export const AuthAPI = {
       password,
     });
 
-    useAuthStore
-      .getState()
-      .setTokens(
-        response.data.accessToken,
-        response.data.refreshToken,
-        response.data.expiresIn
-      );
-
-    await authUtils.setTokens(
-      response.data.accessToken,
-      response.data.refreshToken,
-      response.data.expiresIn
-    );
-
+    await processAuthSuccess(response.data);
     return response.data;
   },
 
@@ -75,20 +75,7 @@ export const AuthAPI = {
       lastName,
     });
 
-    useAuthStore
-      .getState()
-      .setTokens(
-        response.data.accessToken,
-        response.data.refreshToken,
-        response.data.expiresIn
-      );
-
-    await authUtils.setTokens(
-      response.data.accessToken,
-      response.data.refreshToken,
-      response.data.expiresIn
-    );
-
+    await processAuthSuccess(response.data);
     return response.data;
   },
 
@@ -100,17 +87,34 @@ export const AuthAPI = {
     try {
       await axiosClient.post('/auth/logout');
     } finally {
-      useAuthStore.getState().logout();
-
-      await authUtils.clearTokens();
-
-      queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-        isAuthenticated: false,
-      });
+      await useAuthStore.getState().logout();
     }
   },
 
-  refreshToken: refreshTokenFunction,
+  refreshToken: async (): Promise<AuthResponse> => {
+    try {
+      const success = await useAuthStore.getState().refreshTokens();
+
+      if (!success) {
+        throw new Error('Token refresh failed');
+      }
+
+      const accessToken = useAuthStore.getState().accessToken;
+      const refreshToken = useAuthStore.getState().refreshToken;
+      const tokenExpiry = useAuthStore.getState().tokenExpiry;
+
+      return {
+        accessToken: accessToken || '',
+        refreshToken: refreshToken || '',
+        expiresIn: tokenExpiry
+          ? tokenExpiry - Math.floor(Date.now() / 1000)
+          : undefined,
+      };
+    } catch (error) {
+      console.error('Error in refreshToken:', error);
+      throw error;
+    }
+  },
 
   googleLogin: (): string => {
     return `${axiosClient.defaults.baseURL}/auth/google`;
@@ -125,78 +129,57 @@ export const AuthAPI = {
     type?: string
   ): Promise<SocialLoginResult> => {
     try {
+      let response;
+
       if (type === 'google' || type === 'facebook') {
         const endpoint =
           type === 'google' ? '/auth/google/token' : '/auth/fb/token';
-        const response = await axios.post<AuthResponse>(
+        response = await axios.post<AuthResponse>(
           `${getBaseURL()}${endpoint}`,
           { token },
           { headers: { 'Content-Type': 'application/json' } }
         );
-
-        if (response.data.accessToken) {
-          useAuthStore
-            .getState()
-            .setTokens(
-              response.data.accessToken,
-              response.data.refreshToken,
-              response.data.expiresIn
-            );
-
-          await authUtils.setTokens(
-            response.data.accessToken,
-            response.data.refreshToken,
-            response.data.expiresIn
-          );
-
-          queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-            isAuthenticated: true,
-          });
-
-          invalidateAuthDependentQueries();
-
-          return {
-            success: true,
-            accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken,
-            expiresIn: response.data.expiresIn,
-          };
-        }
       } else {
-        const response = await axios.post<AuthResponse>(
-          `${getBaseURL()}/auth/refresh`,
-          { refreshToken: token },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
+        try {
+          useAuthStore.getState().setTokens('', token);
+          const refreshSuccess = await useAuthStore.getState().refreshTokens();
 
-        if (response.data.accessToken) {
-          useAuthStore
-            .getState()
-            .setTokens(
-              response.data.accessToken,
-              response.data.refreshToken || token,
-              response.data.expiresIn
-            );
+          if (!refreshSuccess) {
+            return { success: false };
+          }
 
-          await authUtils.setTokens(
-            response.data.accessToken,
-            response.data.refreshToken || token,
-            response.data.expiresIn
-          );
-
-          queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-            isAuthenticated: true,
-          });
-
-          invalidateAuthDependentQueries();
+          const accessToken = useAuthStore.getState().accessToken;
+          const refreshToken = useAuthStore.getState().refreshToken;
+          const tokenExpiry = useAuthStore.getState().tokenExpiry;
 
           return {
             success: true,
-            accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken || token,
-            expiresIn: response.data.expiresIn,
+            accessToken: accessToken || undefined,
+            refreshToken: refreshToken || token,
+            expiresIn: tokenExpiry
+              ? tokenExpiry - Math.floor(Date.now() / 1000)
+              : undefined,
           };
+        } catch (err) {
+          console.error('Error exchanging refresh token:', err);
+          return { success: false };
         }
+      }
+
+      if (response?.data?.accessToken) {
+        const refreshToken = response.data.refreshToken || token;
+
+        await processAuthSuccess({
+          ...response.data,
+          refreshToken,
+        });
+
+        return {
+          success: true,
+          accessToken: response.data.accessToken,
+          refreshToken,
+          expiresIn: response.data.expiresIn,
+        };
       }
 
       return { success: false };
@@ -235,12 +218,10 @@ export const processSocialAuthDeepLink = async (
     const tokenData = extractTokenFromUrl(url);
     if (!tokenData?.token) return null;
 
-    let loginType: 'google' | 'facebook' | 'unknown' | undefined;
+    let loginType: 'google' | 'facebook' | 'unknown' = 'unknown';
 
     if (tokenData.type === 'google' || tokenData.type === 'facebook') {
       loginType = tokenData.type;
-    } else {
-      loginType = 'unknown';
     }
 
     return {

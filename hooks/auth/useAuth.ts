@@ -1,278 +1,160 @@
-import { axiosClient } from '@/api';
-import { AuthQueryKeys, UserQueryKeys } from '@/constants/QueryKeys';
-import {
-  AuthAPI,
-  AuthResponse,
-  extractTokenFromUrl,
-} from '@/services/api/auth';
-import { UserAPI } from '@/services/api/user';
-import {
-  invalidateAuthDependentQueries,
-  queryClient,
-} from '@/services/query/queryClient';
-import { IUserProfile } from '@/types/user';
-import * as authUtils from '@/utils/authUtils';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useState } from 'react';
+import { AuthQueryKeys } from '@/constants/QueryKeys';
+import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
 
-export { authUtils };
+/**
+ * Hook for accessing authentication functionality
+ * This hook is a facade for the authentication store that adds React Query integration
+ * and navigation capabilities.
+ */
+export const useAuth = () => {
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-export function useAuth() {
-  const [socialLoading, setSocialLoading] = useState<
-    'google' | 'facebook' | null
-  >(null);
-  const [socialLoginError, setSocialLoginError] = useState<string | null>(null);
+  // Get auth state from store
+  const {
+    accessToken,
+    refreshToken,
+    isAuthenticated,
+    isLoading,
+    isRefreshing,
+    error,
 
-  const authStateQuery = useQuery({
+    // Social login state
+    socialLoginLoading,
+    socialLoginError,
+
+    // Auth operations
+    login,
+    signup,
+    logout,
+    forgotPassword,
+    startSocialLogin,
+  } = useAuthStore();
+
+  // Get user data
+  const { user } = useUserStore();
+
+  // Auth state query
+  const authQuery = useQuery({
     queryKey: [AuthQueryKeys.AUTH_STATE],
-    queryFn: async () => {
-      const isAuthenticated = await authUtils.checkAuthenticated();
-      return { isAuthenticated };
-    },
-    staleTime: Infinity,
+    queryFn: () => ({ isAuthenticated }),
+    initialData: { isAuthenticated },
   });
 
-  const isAuthenticated = authStateQuery.data?.isAuthenticated || false;
+  // Navigation helpers
+  const navigateAfterLogin = useCallback(() => {
+    router.replace('/(tabs)' as any);
+  }, [router]);
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const isAuthenticated = await authUtils.checkAuthenticated();
-      if (isAuthenticated) {
-        queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-          isAuthenticated: true,
-        });
-      }
-    };
+  const navigateToLogin = useCallback(() => {
+    router.replace('/login' as any);
+  }, [router]);
 
-    initializeAuth();
-  }, []);
-
-  const userQuery = useQuery<IUserProfile | null>({
-    queryKey: [UserQueryKeys.userData],
-    queryFn: async () => {
-      try {
-        const response = await UserAPI.getCurrentUser();
-        if (!response) {
-          console.error('User API returned empty response');
-          return null;
-        }
-        return response;
-      } catch (error) {
-        const refreshed = await authUtils.refreshTokens();
-        if (refreshed) {
-          try {
-            const userData = await UserAPI.getCurrentUser();
-            if (!userData) {
-              console.error(
-                'User API returned empty response after token refresh'
-              );
-              return null;
-            }
-            return userData;
-          } catch (secondError) {
-            console.error(
-              'Error fetching user after token refresh:',
-              secondError
-            );
-            return null;
-          }
-        }
-
-        queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-          isAuthenticated: false,
-        });
-        return null;
-      }
+  // Login mutation
+  const loginMutation = useMutation({
+    mutationFn: async ({
+      email,
+      password,
+    }: {
+      email: string;
+      password: string;
+    }) => {
+      const result = await login(email, password);
+      if (!result) throw new Error(error || 'Login failed');
+      return result;
     },
-    enabled: isAuthenticated,
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const loginMutation = useMutation<
-    AuthResponse,
-    Error,
-    { email: string; password: string }
-  >({
-    mutationFn: async ({ email, password }) => {
-      return await AuthAPI.login(email, password);
-    },
-    onSuccess: async (data) => {
-      try {
-        await authUtils.setTokens(data.accessToken, data.refreshToken);
-
-        queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-          isAuthenticated: true,
-        });
-        verifyEmailMutation.mutate();
-        invalidateAuthDependentQueries();
-      } finally {
-        router.replace({
-          pathname: '/(tabs)/profile/authenticated',
-          params: { fromAuth: 'true' },
-        });
-      }
+    onSuccess: () => {
+      navigateAfterLogin();
     },
   });
 
-  const signupMutation = useMutation<
-    AuthResponse,
-    Error,
-    { email: string; password: string; firstName: string; lastName: string }
-  >({
-    mutationFn: async ({ email, password, firstName, lastName }) => {
-      return await AuthAPI.signup(email, password, firstName, lastName);
+  // Signup mutation
+  const signupMutation = useMutation({
+    mutationFn: async ({
+      email,
+      password,
+      firstName,
+      lastName,
+    }: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+    }) => {
+      const result = await signup(email, password, firstName, lastName);
+      if (!result) throw new Error(error || 'Signup failed');
+      return result;
     },
-    onSuccess: async (data) => {
-      try {
-        await authUtils.setTokens(data.accessToken, data.refreshToken);
-
-        queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-          isAuthenticated: true,
-        });
-        verifyEmailMutation.mutate();
-        invalidateAuthDependentQueries();
-      } finally {
-        router.replace({
-          pathname: '/(tabs)/profile/authenticated',
-          params: { fromAuth: 'true' },
-        });
-      }
+    onSuccess: () => {
+      navigateAfterLogin();
     },
   });
 
-  const logoutMutation = useMutation<void, Error, void>({
+  // Logout mutation
+  const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await AuthAPI.logout();
+      await logout();
     },
-    onSuccess: async () => {
-      await authUtils.clearTokens();
-
-      queryClient.clear();
-      queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-        isAuthenticated: false,
-      });
+    onSuccess: () => {
+      navigateToLogin();
     },
   });
 
-  const startSocialLogin = useCallback(
-    async (type: 'google' | 'facebook'): Promise<boolean> => {
-      setSocialLoading(type);
-      setSocialLoginError(null);
-
-      try {
-        const authUrl =
-          type === 'google' ? AuthAPI.googleLogin() : AuthAPI.facebookLogin();
-
-        const browserResult = await WebBrowser.openAuthSessionAsync(
-          authUrl,
-          'dabbler://auth',
-          { preferEphemeralSession: true }
-        );
-
-        // Handle cancellation
-        if (browserResult.type === 'cancel') {
-          setSocialLoading(null);
-          return false;
-        }
-
-        if (browserResult.type !== 'success' || !browserResult.url) {
-          setSocialLoading(null);
-          setSocialLoginError(`${type} login failed. Please try again.`);
-          return false;
-        }
-
-        const tokenData = extractTokenFromUrl(browserResult.url);
-        if (!tokenData?.token) {
-          setSocialLoading(null);
-          setSocialLoginError(`Unable to extract token from ${type} response.`);
-          return false;
-        }
-
-        const result = await AuthAPI.exchangeToken(
-          tokenData.token,
-          tokenData.type
-        );
-
-        if (result.success) {
-          if (result.accessToken) {
-            await authUtils.setTokens(
-              result.accessToken,
-              result.refreshToken || tokenData.token
-            );
-
-            queryClient.setQueryData([AuthQueryKeys.AUTH_STATE], {
-              isAuthenticated: true,
-            });
-
-            invalidateAuthDependentQueries();
-
-            axiosClient.defaults.headers.common[
-              'Authorization'
-            ] = `Bearer ${result.accessToken}`;
-          }
-
-          router.replace({
-            pathname: '/(tabs)/profile/authenticated',
-            params: { fromAuth: 'true' },
-          });
-          setSocialLoading(null);
-          return true;
-        }
-
-        setSocialLoading(null);
-        setSocialLoginError(
-          `Unable to complete ${type} login. Please try again.`
-        );
-        return false;
-      } catch (error) {
-        console.error('Social login error:', error);
-        setSocialLoading(null);
-        setSocialLoginError(
-          `${type} login encountered an error. Please try again.`
-        );
-        return false;
-      }
+  // Forgot password mutation
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      const result = await forgotPassword(email);
+      if (!result) throw new Error(error || 'Failed to request password reset');
+      return result;
     },
-    []
-  );
+  });
 
-  const verifyEmailMutation = useMutation<void, Error, void>({
-    mutationFn: async () => {
-      return await UserAPI.verifyEmail();
+  // Social login mutation
+  const socialLoginMutation = useMutation({
+    mutationFn: async ({
+      provider,
+      redirectUrl,
+    }: {
+      provider: 'google' | 'facebook';
+      redirectUrl: string;
+    }) => {
+      const result = await startSocialLogin(provider, redirectUrl);
+      if (!result.success) {
+        throw new Error(socialLoginError || `Failed to login with ${provider}`);
+      }
+      return result;
+    },
+    onSuccess: () => {
+      navigateAfterLogin();
     },
   });
 
   return {
-    user: userQuery.data,
+    // State
     isLoading:
-      userQuery.isLoading ||
-      authStateQuery.isLoading ||
+      isLoading ||
       loginMutation.isPending ||
       signupMutation.isPending ||
       logoutMutation.isPending,
-    isAuthenticated,
-    socialLoading,
-    socialLoginError,
-    login: loginMutation.mutate,
-    loginAsync: loginMutation.mutateAsync,
-    signup: signupMutation.mutate,
-    signupAsync: signupMutation.mutateAsync,
-    logout: logoutMutation.mutate,
-    logoutAsync: logoutMutation.mutateAsync,
-    verifyEmail: verifyEmailMutation.mutate,
-    verifyEmailAsync: verifyEmailMutation.mutateAsync,
-    refreshTokens: authUtils.refreshTokens,
-    setTokens: authUtils.setTokens,
-    startSocialLogin,
-    error:
-      userQuery.error ||
-      loginMutation.error ||
-      signupMutation.error ||
-      logoutMutation.error,
-  };
-}
+    isAuthenticated: authQuery.data?.isAuthenticated || false,
+    error,
+    user,
+    accessToken,
+    refreshToken,
 
-export default useAuth;
+    // Social login
+    socialLoginLoading: socialLoginLoading || socialLoginMutation.isPending,
+    socialLoginError,
+
+    // Actions
+    login: loginMutation.mutate,
+    signup: signupMutation.mutate,
+    logout: logoutMutation.mutate,
+    forgotPassword: forgotPasswordMutation.mutate,
+    socialLogin: socialLoginMutation.mutate,
+  };
+};

@@ -1,21 +1,21 @@
 import { darkMapStyle, lightMapStyle } from '@/constants/MapColors';
 import { useTheme } from '@/providers/ThemeContext';
 import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    memo,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import {
-  Animated,
-  Dimensions,
-  LayoutAnimation,
-  Platform,
-  StyleSheet,
-  UIManager,
-  View,
+    Animated,
+    Dimensions,
+    LayoutAnimation,
+    Platform,
+    StyleSheet,
+    UIManager,
+    View,
 } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import ClusterMarker from './ClusterMarker';
@@ -236,39 +236,32 @@ const MapComponent: React.FC<MapComponentProps> = memo(
       }
     }, [processedVenues, processedClusters]);
 
-    const { validVenues, validClusters } = useMemo(() => {
-      const venuesToUse =
-        processedVenues.length === 0 && isRegionChanging.current
-          ? prevVenues.current
-          : processedVenues;
+    // Calculate cluster radius based on zoom level - smaller radius at higher zoom levels
+    const calculateDynamicClusterRadius = (region: Region) => {
+      const { longitudeDelta } = region;
+      // Base radius calculation
+      const baseRadius = calculateRadius(region);
+      
+      // Adjust radius based on zoom level (longitudeDelta)
+      // As we zoom in (longitudeDelta gets smaller), we want a smaller cluster radius
+      if (longitudeDelta < 0.01) {
+        // Very zoomed in - use smaller clusters
+        return baseRadius * 0.5;  
+      } else if (longitudeDelta < 0.05) {
+        // Medium zoom level
+        return baseRadius * 0.7;
+      } else {
+        // Zoomed out - use normal radius
+        return baseRadius;
+      }
+    };
 
-      const clustersToUse =
-        processedClusters.length === 0 && isRegionChanging.current
-          ? prevClusters.current
-          : processedClusters;
-
-      return {
-        validVenues: venuesToUse.filter(
-          (v) =>
-            v?.location?.coordinates &&
-            Array.isArray(v.location.coordinates) &&
-            v.location.coordinates.length >= 2 &&
-            typeof v.location.coordinates[1] === 'number' &&
-            typeof v.location.coordinates[0] === 'number'
-        ),
-        validClusters: clustersToUse.filter(
-          (c) =>
-            c?.center?.latitude !== undefined &&
-            c?.center?.longitude !== undefined &&
-            typeof c.center.latitude === 'number' &&
-            typeof c.center.longitude === 'number'
-        ),
-      };
-    }, [processedVenues, processedClusters]);
-
+    // Enhanced region change handlers with dynamic clustering
     const handleRegionChangeStart = useCallback(() => {
+      if (isRegionChanging.current) return;
       isRegionChanging.current = true;
-
+      
+      // Cancel any pending region change timeout
       if (regionChangeTimeoutRef.current) {
         clearTimeout(regionChangeTimeoutRef.current);
       }
@@ -277,16 +270,21 @@ const MapComponent: React.FC<MapComponentProps> = memo(
     const handleRegionChangeComplete = useCallback(
       (region: Region) => {
         currentRegion.current = region;
-        const radius = calculateRadius(region);
-
+        
+        // Apply a slight delay to prevent too many API calls when panning/zooming
         if (regionChangeTimeoutRef.current) {
           clearTimeout(regionChangeTimeoutRef.current);
         }
-
+        
+        // Calculate the dynamic cluster radius based on zoom level
+        const dynamicRadius = calculateDynamicClusterRadius(region);
+        
         regionChangeTimeoutRef.current = setTimeout(() => {
+          if (onRegionChange) {
+            onRegionChange(region, dynamicRadius);
+          }
           isRegionChanging.current = false;
-          onRegionChange(region, radius);
-        }, 200);
+        }, 150);
       },
       [onRegionChange]
     );
@@ -317,6 +315,58 @@ const MapComponent: React.FC<MapComponentProps> = memo(
       },
       [configureMarkerAnimation]
     );
+
+    // Prevent marker overlap by adjusting visible venues at high zoom levels
+    const deduplicateMarkers = useCallback((venues: Venue[]) => {
+      if (!venues || venues.length <= 1) return venues;
+      
+      // At high zoom levels, we don't need to deduplicate
+      if (currentRegion.current.longitudeDelta < 0.005) return venues;
+      
+      const gridSize = 0.0005; // Grid cell size in degrees (adjust based on your needs)
+      const occupiedCells = new Map<string, Venue>();
+      
+      // Sort venues by some priority (e.g., popularity, or just alphabetically)
+      // In a real app, you'd have a better priority metric
+      const sortedVenues = [...venues].sort((a, b) => a.name.localeCompare(b.name));
+      
+      return sortedVenues.filter(venue => {
+        if (!venue.location?.coordinates) return false;
+        
+        // Calculate grid cell for this venue
+        const latCell = Math.floor(venue.location.coordinates[1] / gridSize);
+        const lngCell = Math.floor(venue.location.coordinates[0] / gridSize);
+        const cellKey = `${latCell},${lngCell}`;
+        
+        // If cell is unoccupied, mark it and include this venue
+        if (!occupiedCells.has(cellKey)) {
+          occupiedCells.set(cellKey, venue);
+          return true;
+        }
+        
+        // Cell is occupied, skip this venue
+        return false;
+      });
+    }, []);
+    
+    // Apply marker deduplication to venues
+    const validVenues = useMemo(() => {
+      const filtered = processedVenues.filter(
+        venue => venue?.location?.coordinates?.length === 2
+      );
+      return deduplicateMarkers(filtered);
+    }, [processedVenues, deduplicateMarkers]);
+    
+    // Filter valid clusters
+    const validClusters = useMemo(() => {
+      return processedClusters.filter(
+        (c) =>
+          c?.center?.latitude !== undefined &&
+          c?.center?.longitude !== undefined &&
+          typeof c.center.latitude === 'number' &&
+          typeof c.center.longitude === 'number'
+      );
+    }, [processedClusters]);
 
     const venueMarkers = useMemo(
       () =>

@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 18,
     marginTop: 12,
-    color: '#F97316',
+    color: '#3B82F6',
     fontWeight: '500',
     letterSpacing: 1,
   },
